@@ -2,11 +2,11 @@
 
 ## Weekly Assignments
 
-The design is targetted to run on the DE-0 Nano FPGA board.
+Weekly assignments description and code files provided in weekly folders
 
 ## Final Project
 
-Dustin Nguyen, Shane O'Donnell, Quinn Johnson, Eeshana Hari
+Final project description and code files provided in Final Project Folder
 
 ## Libraries
 
