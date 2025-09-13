@@ -10,4 +10,4 @@ Final project description and code files provided in Final Project Folder
 
 ## Libraries
 
-sklearn
+sklearn, numpy, pandas
