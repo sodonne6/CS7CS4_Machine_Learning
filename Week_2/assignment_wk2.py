@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score
 
 
 #open csv and read first line -. needs to be included in the submission
@@ -143,10 +144,57 @@ plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30,
 plt.scatter(X1[y_ext_pred == 1], X2[y_ext_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
 plt.scatter(X1[y_ext_pred == -1], X2[y_ext_pred == -1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
 # Labels
-plt.xlabel("x₁")
-plt.ylabel("x₂")
-plt.title("Extended Logistic Regression Classifier (c(i))")
+plt.xlabel("x1")
+plt.ylabel("x1")
+plt.title("Logistic Regression Classifier with Square of Each Feature (c(i))")
 plt.legend()
 plt.show()
     
+    
+#c(iii) compare performance with reasonable baseline predictor 
+#baseline - predict the most frequent class in the training set
+most_freq_class = y.mode()[0]
+baseline_pred = np.full(y.shape, most_freq_class)
+#calculate accuracy for baseline, logistic regression and extended logistic regression
+baseline_acc = accuracy_score(y, baseline_pred)
+logistic_acc = accuracy_score(y, model.predict(X))
+logistic_ext_acc = accuracy_score(y, model_ext.predict(X_ext))
+
+#print accuracy values 
+print(f"c(iii) - Baseline accuracy: {baseline_acc:.3f}")
+print(f"c(iii) - Logistic regression (2 features) accuracy: {logistic_acc:.3f}")
+print(f"c(iii) - Logistic regression (4 features) accuracy: {logistic_ext_acc:.3f}") 
+
+#c(iv) - bonus - plot the classifier boundary 
+#have to solve a quadratic equation to get the decision boundary
+x1_range = np.linspace(X1.min(), X1.max(), 400)
+a = w[3]
+b = w[1]
+c = w[0]*x1_range + w[2]*x1_range**2 + b_ext
+discriminant = b**2 - 4*a*c
+#only consider points where discriminant is non-negative
+valid = discriminant >= 0
+x1_valid = x1_range[valid]
+sqrt_discriminant = np.sqrt(discriminant[valid])
+x2_pos = (-b + sqrt_discriminant) / (2*a)
+x2_neg = (-b - sqrt_discriminant) / (2*a)
+#plot the decision boundary along with data points
+plt.figure(figsize=(8, 6))
+#plot OG data points
+plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
+plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
+#plot the predicted points
+plt.scatter(X1[y_ext_pred == 1], X2[y_ext_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
+plt.scatter(X1[y_ext_pred == -1], X2[y_ext_pred == -1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
+#plot decision boundary
+#plt.plot(x1_valid, x2_pos, color='red', linestyle='--', label='Decision Boundary (Upper)')
+plt.plot(x1_valid, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
+# Labels
+plt.xlabel("x₁")
+plt.ylabel("x₂")
+plt.title("Extended Logistic Regression Decision Boundary (c(iv))")
+plt.legend()
+plt.show()
+
+
     
