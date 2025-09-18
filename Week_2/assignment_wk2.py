@@ -57,12 +57,12 @@ y_pred = model.predict(X)
 plt.figure(figsize=(8, 6))
 
 #plot OG data points 
-plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
-plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
+plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True +1')
+plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True -1')
 
 #plot the predicted points
-plt.scatter(X1[y_pred == 1], X2[y_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
-plt.scatter(X1[y_pred==-1], X2[y_pred==-1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
+plt.scatter(X1[y_pred == 1], X2[y_pred == 1], marker='x', color='orange', label='Predicted +1', alpha=0.5)
+plt.scatter(X1[y_pred==-1], X2[y_pred==-1], marker='.', color='purple', label='Predicted -1', alpha=0.5)
 
 #create decision boundary
 
@@ -92,14 +92,23 @@ C_values = [0.001, 1, 100]
 #train and predict and log the weights and bias for C
 print(len(C_values))
 
+#hold all 3 sets of ys values for plotting later if needed
+#then later we can plot all decision boundaries on the same plot along side the true data points
+ys_svm_store = [] #store the ys values for each C to plot later if needed
+
 #TO-DO: loop through C_values and train/predict for each
-for i in range(len(C_values)-1):
+for i in range(len(C_values)):
     svm_model = LinearSVC(C=C_values[i], max_iter=10000)
     svm_model.fit(X, y)
     y_svm_pred = svm_model.predict(X)
     w1_svm, w2_svm = svm_model.coef_[0]
     b_svm = svm_model.intercept_[0]
     print(f"b(i) - SVM Weights: w1 = {w1_svm}, w2 = {w2_svm}, Bias: b = {b_svm}")
+
+    #accuracy for SVM
+    svm_acc = accuracy_score(y, y_svm_pred)
+    print(f"b(i) - SVM Accuracy: {svm_acc}")
+
 
     #plot the training and predicted points and decision boundary for SVM
     plt.figure(figsize=(8, 6))
@@ -112,6 +121,9 @@ for i in range(len(C_values)-1):
     #decision boundary for SVM
     x1_range = np.linspace(X1.min(), X1.max(), 100)
     ys_svm = -(w1_svm/w2_svm) * x1_range - (b_svm/w2_svm)
+    #test point - check ys_svm values
+    #print(ys_svm)
+    ys_svm_store.append(ys_svm) #store for later if needed
     plt.plot(x1_range, ys_svm, color='red', linestyle='--', label='SVM Decision Boundary')
     # Labels
     plt.xlabel("x₁")
@@ -119,7 +131,30 @@ for i in range(len(C_values)-1):
     plt.title("SVM Classifier C = " + str(C_values[i]) + " (b(i))")
     plt.legend()
     plt.show()
-    
+
+
+#plot all decision boundaries on the same plot along side the true data points
+plt.figure(figsize=(8, 6))
+#plot OG data points
+plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
+plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
+colors = ['r', 'orange', 'black']
+#plot decision boundaries for each C
+for i in range(len(C_values)):
+    #need more distinct line colors/styles if plotting all 3
+    #make array of strings containing colors and iterate through at the same time as C_values
+    plt.plot(x1_range, ys_svm_store[i], linestyle='--', label='SVM Decision Boundary C=' + str(C_values[i]), color=colors[i])
+#now plot the logistic regression decision boundary for comparison
+ys_logistic = -(w1/w2) * x1_range - (b/w2)
+plt.plot(x1_range, ys_logistic, color='yellow', linestyle='-', label='Logistic Regression Decision Boundary')
+# Labels
+plt.xlabel("x₁")  
+plt.ylabel("x₂")
+plt.title("SVM Classifier Decision Boundaries")
+plt.legend()
+plt.show()
+
+
 #c(i) - create two additional features a=-> add square of each feature (four features in total). Train logistic classifier give the model and the trained parameters values
     
 #create and store x1^2 and x2^2
