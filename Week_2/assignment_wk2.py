@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
 
 
 #open csv and read first line -. needs to be included in the submission
@@ -35,12 +38,16 @@ plt.title('a(i) - 2D Scatter Plot')
 plt.legend()
 plt.show()
 
+#split data 0.8 training and 0.2 testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
 #a(ii) - train a logistic regression classifier on the data
 
 #penalty - l2 regularization can discourage large weights but doesn't force them to be zero
 #C -inverse of regularisation - 1 is standard
 model = LogisticRegression(penalty='l2', C=1, solver='liblinear')
-model.fit(X, y)
+#changed ti o using training set for fitting
+model.fit(X_train, y_train)
 
 w1, w2 = model.coef_[0] #weights for X1 and X2
 b = model.intercept_[0] #bias term
@@ -50,9 +57,20 @@ b = model.intercept_[0] #bias term
 #p^​(y=1∣x)=1/(1+exp(−(b+w1​x1​+w2​x2​)))
 print(f"a(ii) - Weights: w1 = {w1}, w2 = {w2}, Bias: b = {b}")
 
-y_pred = model.predict(X)
+#changed ti o using test set for accuracy
+y_pred = model.predict(X_test)
 
+#lets add 5-fold cross validation
+cross_val = StratifiedKFold(n_splits=5,shuffle=True, random_state=42)
+log_cross_val_scores = cross_val_score(model, X, y, cv=cross_val,scoring='accuracy')
+print(f"5-Fold cross validation scores: {log_cross_val_scores}")
+print(f"Mean cross validation score: {np.mean(log_cross_val_scores)}")
 #a(iii) - plot the training data and the decision boundary
+
+#5 fold cross val for svm - use c = 1 for direct comparison
+svm_cross_val_scores = cross_val_score(LinearSVC(C=1, max_iter=10000), X, y, cv=cross_val, scoring='accuracy')
+print(f"SVM 5-Fold cross validation scores: {svm_cross_val_scores}")
+print(f"SVM Mean cross validation score: {np.mean(svm_cross_val_scores)}")
 
 plt.figure(figsize=(8, 6))
 
@@ -61,8 +79,8 @@ plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True +1')
 plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True -1')
 
 #plot the predicted points
-plt.scatter(X1[y_pred == 1], X2[y_pred == 1], marker='x', color='orange', label='Predicted +1', alpha=0.5)
-plt.scatter(X1[y_pred==-1], X2[y_pred==-1], marker='.', color='purple', label='Predicted -1', alpha=0.5)
+plt.scatter(X_test[y_pred == 1, 0], X_test[y_pred == 1, 1], marker='x', color='orange', label='Predicted +1', alpha=0.5)
+plt.scatter(X_test[y_pred == -1, 0], X_test[y_pred == -1, 1], marker='.', color='purple', label='Predicted -1', alpha=0.5)
 
 #create decision boundary
 
@@ -99,14 +117,14 @@ ys_svm_store = [] #store the ys values for each C to plot later if needed
 #TO-DO: loop through C_values and train/predict for each
 for i in range(len(C_values)):
     svm_model = LinearSVC(C=C_values[i], max_iter=10000)
-    svm_model.fit(X, y)
-    y_svm_pred = svm_model.predict(X)
+    svm_model.fit(X_train, y_train)
+    y_svm_pred = svm_model.predict(X_test)
     w1_svm, w2_svm = svm_model.coef_[0]
     b_svm = svm_model.intercept_[0]
     print(f"b(i) - SVM Weights: w1 = {w1_svm}, w2 = {w2_svm}, Bias: b = {b_svm}")
 
     #accuracy for SVM
-    svm_acc = accuracy_score(y, y_svm_pred)
+    svm_acc = accuracy_score(y_test, y_svm_pred)
     print(f"b(i) - SVM Accuracy: {svm_acc}")
 
 
@@ -116,8 +134,8 @@ for i in range(len(C_values)):
     plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
     plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
     #plot the predicted points
-    plt.scatter(X1[y_svm_pred == 1], X2[y_svm_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
-    plt.scatter(X1[y_svm_pred == -1], X2[y_svm_pred == -1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
+    plt.scatter(X_test[y_svm_pred == 1, 0], X_test[y_svm_pred == 1, 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
+    plt.scatter(X_test[y_svm_pred == -1, 0], X_test[y_svm_pred == -1, 1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
     #decision boundary for SVM
     x1_range = np.linspace(X1.min(), X1.max(), 100)
     ys_svm = -(w1_svm/w2_svm) * x1_range - (b_svm/w2_svm)
@@ -156,19 +174,41 @@ plt.show()
 
 
 #c(i) - create two additional features a=-> add square of each feature (four features in total). Train logistic classifier give the model and the trained parameters values
-    
-#create and store x1^2 and x2^2
-X1_squared = X1 ** 2
-X2_squared = X2 ** 2
-X_ext = np.column_stack((X1, X2, X1_squared, X2_squared))
-#train logistic regression on extended feature set
+
+#   
+##create and store x1^2 and x2^2
+#X1_squared = X1 ** 2
+#X2_squared = X2 ** 2
+#X_ext = np.column_stack((X1, X2, X1_squared, X2_squared))
+##train logistic regression on extended feature set
+#model_ext = LogisticRegression(penalty='l2', C=1, solver='liblinear')
+#model_ext.fit(X_ext, y)
+#
+#w = model_ext.coef_[0] #weights for X1, X2, X1^2, X2^2
+#b_ext = model_ext.intercept_[0] #bias term
+#print(f"c(i) - Extended Logistic Regression Weights: w1 = {w[0]}, w2 = {w[1]}, w3 = {w[2]}, w4 = {w[3]}, Bias: b = {b_ext}")
+#y_ext_pred = model_ext.predict(X_ext)
+#
+
+#create squared features for training and testing sets
+X1_squared_train = X_train[:,0]**2
+X2_squared_train = X_train[:,1]**2
+X1_squared_test  = X_test[:,0]**2
+X2_squared_test  = X_test[:,1]**2
+
+#stack to create extended feature sets
+X_ext_train = np.column_stack((X_train[:,0], X_train[:,1], X1_squared_train, X2_squared_train))
+X_ext_test  = np.column_stack((X_test[:,0], X_test[:,1], X1_squared_test, X2_squared_test))
+
+#train log reg model on training set with extended features
 model_ext = LogisticRegression(penalty='l2', C=1, solver='liblinear')
-model_ext.fit(X_ext, y)
+model_ext.fit(X_ext_train, y_train)
 
 w = model_ext.coef_[0] #weights for X1, X2, X1^2, X2^2
 b_ext = model_ext.intercept_[0] #bias term
 print(f"c(i) - Extended Logistic Regression Weights: w1 = {w[0]}, w2 = {w[1]}, w3 = {w[2]}, w4 = {w[3]}, Bias: b = {b_ext}")
-y_ext_pred = model_ext.predict(X_ext)
+y_ext_pred = model_ext.predict(X_ext_test)
+
 
 #plot the true data points and the predicted points
 plt.figure(figsize=(8, 6))
@@ -176,11 +216,11 @@ plt.figure(figsize=(8, 6))
 plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
 plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
 #plot the predicted points
-plt.scatter(X1[y_ext_pred == 1], X2[y_ext_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
-plt.scatter(X1[y_ext_pred == -1], X2[y_ext_pred == -1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
+plt.scatter(X_test[y_ext_pred == 1, 0], X_test[y_ext_pred == 1, 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
+plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
 # Labels
 plt.xlabel("x1")
-plt.ylabel("x1")
+plt.ylabel("x2")
 plt.title("Logistic Regression Classifier with Square of Each Feature (c(i))")
 plt.legend()
 plt.show()
@@ -188,12 +228,12 @@ plt.show()
     
 #c(iii) compare performance with reasonable baseline predictor 
 #baseline - predict the most frequent class in the training set
-most_freq_class = y.mode()[0]
-baseline_pred = np.full(y.shape, most_freq_class)
+most_freq_class = y_train.mode()[0]
+baseline_pred = np.full(y_test.shape, most_freq_class)
 #calculate accuracy for baseline, logistic regression and extended logistic regression
-baseline_acc = accuracy_score(y, baseline_pred)
-logistic_acc = accuracy_score(y, model.predict(X))
-logistic_ext_acc = accuracy_score(y, model_ext.predict(X_ext))
+baseline_acc = accuracy_score(y_test, baseline_pred)
+logistic_acc = accuracy_score(y_test, model.predict(X_test))
+logistic_ext_acc = accuracy_score(y_test, model_ext.predict(X_ext_test))
 
 #print accuracy values 
 print(f"c(iii) - Baseline accuracy: {baseline_acc:.3f}")
@@ -219,8 +259,8 @@ plt.figure(figsize=(8, 6))
 plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='True Positive')
 plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='True Negative')
 #plot the predicted points
-plt.scatter(X1[y_ext_pred == 1], X2[y_ext_pred == 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
-plt.scatter(X1[y_ext_pred == -1], X2[y_ext_pred == -1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
+plt.scatter(X_test[y_ext_pred == 1, 0], X_test[y_ext_pred == 1, 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
+plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
 #plot decision boundary
 #plt.plot(x1_valid, x2_pos, color='red', linestyle='--', label='Decision Boundary (Upper)')
 plt.plot(x1_valid, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
