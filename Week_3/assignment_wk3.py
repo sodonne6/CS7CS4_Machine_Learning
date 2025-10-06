@@ -6,6 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split
 
 
 #load in data
@@ -38,15 +39,22 @@ plt.show()
 
 #in addition to the two features in data file add extra polynomial features equal to all combinations of powers 
 #of x1 and x2 up to the 5th power
+#use
 poly = PolynomialFeatures(degree=5, include_bias=False)
 X_poly = poly.fit_transform(X)
-print(X_poly.shape)  #check new shape of the features 
-print(poly.get_feature_names_out())  #check the names of new features for the craic
+print(X_poly.shape)  #check new shape of the features
+
+#split data into train and split
+#use 80% of the data for training and 20% for testing
+X_train, X_test, y_train, y_test = train_test_split(X_poly, y, test_size=0.2, random_state=42)
+
+
+
 
 #train lasso regression model on the data with polynomial features with changing c values
 #c value should start small enough that all trained coeffs are zero then increase accordingly
 #c_val = [0.001, 0.01, 0.1, 1, 10, 100] #TO:DO: change these values to ensure it starts with all coeffs zero
-c_val = [100,10,1,0.1,0.01,0.001,0.0001] #changed these values to ensure it starts with all coeffs zero
+c_val = [10000,1000,100,10,1,0.1,0.01,0.001,0.0001] #changed these values to ensure it starts with all coeffs zero
 #for lasso the bigger alpha (c) the more coeffs are zero
 
 #store models here for use later
@@ -54,9 +62,9 @@ models = []
 
 for c in c_val: #iterate through the c value array
     lasso_model = Lasso(alpha=c, max_iter=10000) #create lasso model with c value
-    lasso_model.fit(X_poly, y) #fit the model to the data
+    lasso_model.fit(X_train, y_train) #fit the model to the data
     coeffs = lasso_model.coef_ #get the coeffs
-    print(f"Coefficients: {coeffs}\n")
+    print(f"Lasso Coefficients C={c}: {coeffs}\n")
     
     #store model currently used
     models.append((c, lasso_model))

@@ -60,17 +60,7 @@ print(f"a(ii) - Weights: w1 = {w1}, w2 = {w2}, Bias: b = {b}")
 #changed ti o using test set for accuracy
 y_pred = model.predict(X_test)
 
-#lets add 5-fold cross validation
-cross_val = StratifiedKFold(n_splits=5,shuffle=True, random_state=42)
-log_cross_val_scores = cross_val_score(model, X, y, cv=cross_val,scoring='accuracy')
-print(f"5-Fold cross validation scores: {log_cross_val_scores}")
-print(f"Mean cross validation score: {np.mean(log_cross_val_scores)}")
-#a(iii) - plot the training data and the decision boundary
 
-#5 fold cross val for svm - use c = 1 for direct comparison
-svm_cross_val_scores = cross_val_score(LinearSVC(C=1, max_iter=10000), X, y, cv=cross_val, scoring='accuracy')
-print(f"SVM 5-Fold cross validation scores: {svm_cross_val_scores}")
-print(f"SVM Mean cross validation score: {np.mean(svm_cross_val_scores)}")
 
 plt.figure(figsize=(8, 6))
 
@@ -97,6 +87,18 @@ plt.ylabel("x₂")
 plt.title("Logistic Regression Classifier (a(ii) & a(iii))")
 plt.legend()
 plt.show()
+
+#lets add 5-fold cross validation
+cross_val = StratifiedKFold(n_splits=5,shuffle=True, random_state=42)
+log_cross_val_scores = cross_val_score(model, X, y, cv=cross_val,scoring='accuracy')
+print(f"5-Fold cross validation scores: {log_cross_val_scores}")
+print(f"Mean cross validation score: {np.mean(log_cross_val_scores)}")
+#a(iii) - plot the training data and the decision boundary
+
+#5 fold cross val for svm - use c = 1 for direct comparison
+svm_cross_val_scores = cross_val_score(LinearSVC(C=1, max_iter=10000), X, y, cv=cross_val, scoring='accuracy')
+print(f"SVM 5-Fold cross validation scores: {svm_cross_val_scores}")
+print(f"SVM Mean cross validation score: {np.mean(svm_cross_val_scores)}")
 
 #b(i) - use sklearn to train svm classifier on the data 
 #use LinearSVC in sklearn
