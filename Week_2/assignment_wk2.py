@@ -88,7 +88,7 @@ plt.title("Logistic Regression Classifier (a(ii) & a(iii))")
 plt.legend()
 plt.show()
 
-#lets add 5-fold cross validation
+#lets add 5-fold cross validation just to see how it works - will implement properly in next assignment ;)
 cross_val = StratifiedKFold(n_splits=5,shuffle=True, random_state=42)
 log_cross_val_scores = cross_val_score(model, X, y, cv=cross_val,scoring='accuracy')
 print(f"5-Fold cross validation scores: {log_cross_val_scores}")
@@ -99,6 +99,8 @@ print(f"Mean cross validation score: {np.mean(log_cross_val_scores)}")
 svm_cross_val_scores = cross_val_score(LinearSVC(C=1, max_iter=10000), X, y, cv=cross_val, scoring='accuracy')
 print(f"SVM 5-Fold cross validation scores: {svm_cross_val_scores}")
 print(f"SVM Mean cross validation score: {np.mean(svm_cross_val_scores)}")
+
+
 
 #b(i) - use sklearn to train svm classifier on the data 
 #use LinearSVC in sklearn
@@ -177,21 +179,6 @@ plt.show()
 
 #c(i) - create two additional features a=-> add square of each feature (four features in total). Train logistic classifier give the model and the trained parameters values
 
-#   
-##create and store x1^2 and x2^2
-#X1_squared = X1 ** 2
-#X2_squared = X2 ** 2
-#X_ext = np.column_stack((X1, X2, X1_squared, X2_squared))
-##train logistic regression on extended feature set
-#model_ext = LogisticRegression(penalty='l2', C=1, solver='liblinear')
-#model_ext.fit(X_ext, y)
-#
-#w = model_ext.coef_[0] #weights for X1, X2, X1^2, X2^2
-#b_ext = model_ext.intercept_[0] #bias term
-#print(f"c(i) - Extended Logistic Regression Weights: w1 = {w[0]}, w2 = {w[1]}, w3 = {w[2]}, w4 = {w[3]}, Bias: b = {b_ext}")
-#y_ext_pred = model_ext.predict(X_ext)
-#
-
 #create squared features for training and testing sets
 X1_squared_train = X_train[:,0]**2
 X2_squared_train = X_train[:,1]**2
@@ -232,15 +219,30 @@ plt.show()
 #baseline - predict the most frequent class in the training set
 most_freq_class = y_train.mode()[0]
 baseline_pred = np.full(y_test.shape, most_freq_class)
-#calculate accuracy for baseline, logistic regression and extended logistic regression
+#calculate accuracy for baseline logistic regression and extended logistic regression
 baseline_acc = accuracy_score(y_test, baseline_pred)
 logistic_acc = accuracy_score(y_test, model.predict(X_test))
 logistic_ext_acc = accuracy_score(y_test, model_ext.predict(X_ext_test))
 
 #print accuracy values 
-print(f"c(iii) - Baseline accuracy: {baseline_acc:.3f}")
-print(f"c(iii) - Logistic regression (2 features) accuracy: {logistic_acc:.3f}")
-print(f"c(iii) - Logistic regression (4 features) accuracy: {logistic_ext_acc:.3f}") 
+print("c(iii) - Baseline accuracy:", baseline_acc)
+print("c(iii) - Logistic regression (2 features) accuracy:", logistic_acc)
+print("c(iii) - Logistic regression (4 features) accuracy:", logistic_ext_acc)
+
+#plot bar graph to compare accuracies
+labels = ['Baseline', 'Logistic 2 features', 'Logistic 4 features']
+accuracies = [baseline_acc, logistic_acc, logistic_ext_acc]
+x = np.arange(len(labels))
+width = 0.2
+plt.figure(figsize=(8, 6))
+plt.bar(x, accuracies, width, color=['red', 'blue', 'orange'])
+plt.xticks(x, labels)
+plt.ylim(0, 1)
+plt.ylabel('Accuracy')
+plt.xlabel('Model')
+plt.title('c(iii) - Model Accuracy Comparison')
+plt.grid(axis='y', alpha=0.2)
+plt.show()
 
 #c(iv) - bonus - plot the classifier boundary 
 #have to solve a quadratic equation to get the decision boundary
@@ -267,8 +269,8 @@ plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.'
 #plt.plot(x1_valid, x2_pos, color='red', linestyle='--', label='Decision Boundary (Upper)')
 plt.plot(x1_valid, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
 # Labels
-plt.xlabel("x₁")
-plt.ylabel("x₂")
+plt.xlabel("x1")
+plt.ylabel("x2")
 plt.title("Extended Logistic Regression Decision Boundary (c(iv))")
 plt.legend()
 plt.show()

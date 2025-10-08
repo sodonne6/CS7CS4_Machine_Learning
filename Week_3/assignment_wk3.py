@@ -89,44 +89,102 @@ for c in c_val: #iterate through the c value array
 #use some nested for loops here is one provided for me to use
 
 #all models have been stored in a list with their c value
+
+#=========subject to change==========
+exstension = 0.25  #extends beyond data a bit as per assignment brief
+x1_min, x1_max = X[:,0].min()-exstension, X[:,0].max()+exstension #set the min and max for the 2 features and broaden range with the extension value
+x2_min, x2_max = X[:,1].min()-exstension, X[:,1].max()+exstension #change the extension value to get the best view
+
+#create grid - use the range defined above to define the limits of the grid
+grid_x1 = np.linspace(x1_min, x1_max, 140)
+grid_x2 = np.linspace(x2_min, x2_max, 140)
+#for loop taken from the assignment brief
 Xtest = []
-grid=np.linspace(-5,5)
-for i in grid:
-    for j in grid:
-        Xtest.append([i,j])
+for i in grid_x1:          
+    for j in grid_x2:
+        Xtest.append([i, j])
 Xtest = np.array(Xtest)
-#expand with polynomial transformer
+
+#expand with polynomial features - this matches the polynomial features used in training
 Xtest_poly = poly.transform(Xtest)
 
-#plot the surface for each model
-X1grid, X2grid = np.meshgrid(grid, grid)
+#meshgrid creates 2d array of the x1 and x2 values for plotting
+X1grid, X2grid = np.meshgrid(grid_x1, grid_x2)
+gridLenX, gridLenY = len(grid_x1), len(grid_x2) #get lengths
+#=========subject to change==========
+#Xtest = []
+#grid=np.linspace(-5,5)
+#for i in grid:
+#    for j in grid:
+#        Xtest.append([i,j])
+#Xtest = np.array(Xtest)
+##expand with polynomial transformer
+#Xtest_poly = poly.transform(Xtest)
+#
+##plot the surface for each model
+#X1grid, X2grid = np.meshgrid(grid, grid)
+#
+#gridLen = len(grid)
 
-gridLen = len(grid)
+#=========subject to change==========
+zmin, zmax = -1.0, 3.0  #match raw data y output range to lock z axis on plots
 
 for c, lasso_model in models:
-    y_pred = lasso_model.predict(Xtest_poly)
-    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
+    Z = lasso_model.predict(Xtest_poly).reshape(gridLenY, gridLenX) #predict using the transformed test data and reshape to match the grid shape
 
-    fig = plt.figure()                      
-    ax = fig.add_subplot(111, projection='3d')        
-    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
-    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
-    model_surface.set_label("predicted surface")
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #ax.set_proj_type('ortho')  # less perspective distortion
+    #plot surface and training points
+    surf = ax.plot_surface(X1grid, X2grid, Z, alpha=0.35, linewidth=0, antialiased=False, label='Predicted surface')
+    ax.scatter(X[:,0], X[:,1], y, s=22, c='r', depthshade=False, label='Training data')
+
+    #lock axes to the tight box to avoid the problem of massive autoscaling
+    ax.set_xlim(grid_x1.min(), grid_x1.max())
+    ax.set_ylim(grid_x2.min(), grid_x2.max())
+    ax.set_zlim(zmin, zmax)
+    
+    ax.view_init(elev=25, azim=35)
+    ax.set_xlabel("x1"); ax.set_ylabel("x2"); ax.set_zlabel("predicted y")
+    ax.set_title(f"Lasso Surface (alpha={c})")
     ax.legend()
-    ax.set_xlabel("x1"); 
-    ax.set_ylabel("x2"); 
-    ax.set_zlabel("predicted y")
-    ax.set_title(f"Lasso surface (alpha={c})")
-    #ax.view_init(elev=22, azim=35)
-    views = [(20,35), (10,35), (20,0), (10,0)]
-    for elev, az in views:
-        ax.view_init(elev=elev, azim=az)
-        plt.draw(); 
-        plt.pause(0.6)                  # short delay so you can see it
-
     plt.show()
-    plt.close(fig)
 
+#=========subject to change==========
+
+#for c, lasso_model in models:
+#    y_pred = lasso_model.predict(Xtest_poly)
+#    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
+#
+#    fig = plt.figure()                      
+#    ax = fig.add_subplot(111, projection='3d')        
+#    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
+#    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
+#    model_surface.set_label("predicted surface")
+#    ax.legend()
+#    ax.set_xlabel("x1"); 
+#    ax.set_ylabel("x2"); 
+#    ax.set_zlabel("predicted y")
+#    ax.set_title(f"Lasso surface (alpha={c})")
+#    
+#    # lock axes to a tight box around your data
+#    ax.set_xlim(-2.2, 2.2)   # x1
+#    ax.set_ylim(-2.2, 2.2)   # x2
+#    ax.set_zlim(-2.0, 6.0)   # y  <-- your original plot tops at ~3
+#
+#    # (optional) stop any further autoscaling
+#    ax.autoscale(enable=False)
+#    
+#    #ax.view_init(elev=22, azim=35)
+#    views = [(20,35), (10,35), (20,0), (10,0)]
+#    for elev, az in views:
+#        ax.view_init(elev=elev, azim=az)
+#        plt.draw(); 
+#        plt.pause(0.6)                  # short delay so you can see it
+#
+#    plt.show()
+#    plt.close(fig)
+#
 #(d) - explain this part in report 
 
 #(e) - redo but with redige regressing instead of lasso regression
@@ -147,43 +205,70 @@ for c in c_val_ridge:
     models_ridge.append((c, ridge_model)) #store the model
     
 #get predictions and plot the surfaces for each model
+
+#already have x1_min, x1_max, x2_min, x2_max from before
+#already have grid_x1, grid_x2 from before
+#can maybe get ride of this as well
 Xtest = []
 grid=np.linspace(-5,5)
 for i in grid:
     for j in grid:
         Xtest.append([i,j])
 Xtest = np.array(Xtest)
-#expand with polynomial transformer
-Xtest_poly = poly.transform(Xtest)
-
-#plot the surface for each model
-X1grid, X2grid = np.meshgrid(grid, grid)
-
-gridLen = len(grid)
+#expand with polynomial transformer - already done for lasso so reuse
 
 for c, ridge_model in models_ridge:
-    y_pred = ridge_model.predict(Xtest_poly)
-    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
-
-    fig = plt.figure()                      
-    ax = fig.add_subplot(111, projection='3d')        
-    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
-    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
-    model_surface.set_label("predicted surface")
+    ridge_Z = ridge_model.predict(Xtest_poly).reshape(gridLenY, gridLenX) #predict using the transformed test data and reshape to match the grid shape
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    surface_ridge = ax.plot_surface(X1grid, X2grid, ridge_Z, alpha=0.35, linewidth=0, antialiased=False, label='Predicted surface')
+    ax.scatter(X[:,0], X[:,1], y, s=22, c='r', depthshade=False, label='Training data')
+    
+    #lock axes to avoid massive autoscaling
+    ax.set_xlim(grid_x1.min(), grid_x1.max())
+    ax.set_ylim(grid_x2.min(), grid_x2.max())
+    ax.set_zlim(zmin, zmax)
+    
+    ax.view_init(elev=25, azim=35)
+    ax.set_xlabel("x1"); ax.set_ylabel("x2"); ax.set_zlabel("predicted y")
+    ax.set_title(f"Ridge Surface (alpha={c})")
     ax.legend()
-    ax.set_xlabel("x1"); 
-    ax.set_ylabel("x2"); 
-    ax.set_zlabel("predicted y")
-    ax.set_title(f"Ridge surface (alpha={c})")
-    #ax.view_init(elev=22, azim=35)
-    views = [(20,35), (10,35), (20,0), (10,0)]
-    for elev, az in views:
-        ax.view_init(elev=elev, azim=az)
-        plt.draw(); 
-        plt.pause(0.6)                  # short delay so you can see it
-
     plt.show()
-    plt.close(fig)  
+#=========old code get rid when working model done==========
+#Xtest_poly = poly.transform(Xtest)
+#
+##plot the surface for each model
+#X1grid, X2grid = np.meshgrid(grid, grid)
+#
+#gridLen = len(grid)
+#
+#for c, ridge_model in models_ridge:
+#    y_pred = ridge_model.predict(Xtest_poly)
+#    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
+#
+#    fig = plt.figure()                      
+#    ax = fig.add_subplot(111, projection='3d')        
+#    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
+#    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
+#    model_surface.set_label("predicted surface")
+#    ax.legend()
+#    ax.set_xlabel("x1"); 
+#    ax.set_ylabel("x2"); 
+#    ax.set_zlabel("predicted y")
+#    ax.set_title(f"Ridge surface (alpha={c})")
+#    #ax.view_init(elev=22, azim=35)
+#    views = [(20,35), (10,35), (20,0), (10,0)]
+#    for elev, az in views:
+#        ax.view_init(elev=elev, azim=az)
+#        plt.draw(); 
+#        plt.pause(0.6)                  # short delay so you can see it
+#
+#    plt.show()
+#    plt.close(fig)  
+
+#=========old code get rid when working model done==========
 
 #use 5 fold cross validation to plot mean and standard dev of the predicition error vs C
 #use errorbar funtion
