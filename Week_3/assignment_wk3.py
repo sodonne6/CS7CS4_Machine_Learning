@@ -70,26 +70,7 @@ for c in c_val: #iterate through the c value array
     models.append((c, lasso_model))
     
     
-    #create a grid of x1 and x2 values for prediction
-    #x1_range = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-    #x2_range = np.linspace(X[:,1].min(), X[:,1].max(), 100)
-    #x1_grid, x2_grid = np.meshgrid(x1_range, x2_range)
-    #X_grid = np.column_stack([x1_grid.ravel(), x2_grid.ravel()])
-    #X_grid_poly = poly.transform(X_grid)
-    #y_pred = lasso_model.predict(X_grid_poly)
-    #y_pred_grid = y_pred.reshape(x1_grid.shape)
-    #plt.figure()
-    #plt.contourf(x1_grid, x2_grid, y_pred_grid, levels=12, cmap='viridis', alpha=0.8)
-    #plt.scatter(X[:,0], X[:,1], c='r', s=12, alpha=0.6)
-    #plt.xlabel("x1"); plt.ylabel("x2"); plt.title(f"Lasso Regression Predictions (c={c})"); plt.colorbar(label="Predicted y")
-    #plt.show()
     
-#for each model generate predicitions for the target variable.
-#Generate these predictions on a grid of feature values
-#use some nested for loops here is one provided for me to use
-
-#all models have been stored in a list with their c value
-
 #=========subject to change==========
 exstension = 0.25  #extends beyond data a bit as per assignment brief
 x1_min, x1_max = X[:,0].min()-exstension, X[:,0].max()+exstension #set the min and max for the 2 features and broaden range with the extension value
@@ -111,22 +92,6 @@ Xtest_poly = poly.transform(Xtest)
 #meshgrid creates 2d array of the x1 and x2 values for plotting
 X1grid, X2grid = np.meshgrid(grid_x1, grid_x2)
 gridLenX, gridLenY = len(grid_x1), len(grid_x2) #get lengths
-#=========subject to change==========
-#Xtest = []
-#grid=np.linspace(-5,5)
-#for i in grid:
-#    for j in grid:
-#        Xtest.append([i,j])
-#Xtest = np.array(Xtest)
-##expand with polynomial transformer
-#Xtest_poly = poly.transform(Xtest)
-#
-##plot the surface for each model
-#X1grid, X2grid = np.meshgrid(grid, grid)
-#
-#gridLen = len(grid)
-
-#=========subject to change==========
 zmin, zmax = -1.0, 3.0  #match raw data y output range to lock z axis on plots
 
 for c, lasso_model in models:
@@ -150,40 +115,6 @@ for c, lasso_model in models:
     ax.legend()
     plt.show()
 
-#=========subject to change==========
-
-#for c, lasso_model in models:
-#    y_pred = lasso_model.predict(Xtest_poly)
-#    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
-#
-#    fig = plt.figure()                      
-#    ax = fig.add_subplot(111, projection='3d')        
-#    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
-#    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
-#    model_surface.set_label("predicted surface")
-#    ax.legend()
-#    ax.set_xlabel("x1"); 
-#    ax.set_ylabel("x2"); 
-#    ax.set_zlabel("predicted y")
-#    ax.set_title(f"Lasso surface (alpha={c})")
-#    
-#    # lock axes to a tight box around your data
-#    ax.set_xlim(-2.2, 2.2)   # x1
-#    ax.set_ylim(-2.2, 2.2)   # x2
-#    ax.set_zlim(-2.0, 6.0)   # y  <-- your original plot tops at ~3
-#
-#    # (optional) stop any further autoscaling
-#    ax.autoscale(enable=False)
-#    
-#    #ax.view_init(elev=22, azim=35)
-#    views = [(20,35), (10,35), (20,0), (10,0)]
-#    for elev, az in views:
-#        ax.view_init(elev=elev, azim=az)
-#        plt.draw(); 
-#        plt.pause(0.6)                  # short delay so you can see it
-#
-#    plt.show()
-#    plt.close(fig)
 #
 #(d) - explain this part in report 
 
@@ -236,39 +167,6 @@ for c, ridge_model in models_ridge:
     ax.set_title(f"Ridge Surface (alpha={c})")
     ax.legend()
     plt.show()
-#=========old code get rid when working model done==========
-#Xtest_poly = poly.transform(Xtest)
-#
-##plot the surface for each model
-#X1grid, X2grid = np.meshgrid(grid, grid)
-#
-#gridLen = len(grid)
-#
-#for c, ridge_model in models_ridge:
-#    y_pred = ridge_model.predict(Xtest_poly)
-#    y_pred_shaped= y_pred.reshape(gridLen, gridLen)
-#
-#    fig = plt.figure()                      
-#    ax = fig.add_subplot(111, projection='3d')        
-#    model_surface=ax.plot_surface(X1grid, X2grid, y_pred_shaped, alpha=0.55, linewidth=0)
-#    ax.scatter(X[:,0], X[:,1], y, s=15, c='r',label='Training data')  # also plot the training points
-#    model_surface.set_label("predicted surface")
-#    ax.legend()
-#    ax.set_xlabel("x1"); 
-#    ax.set_ylabel("x2"); 
-#    ax.set_zlabel("predicted y")
-#    ax.set_title(f"Ridge surface (alpha={c})")
-#    #ax.view_init(elev=22, azim=35)
-#    views = [(20,35), (10,35), (20,0), (10,0)]
-#    for elev, az in views:
-#        ax.view_init(elev=elev, azim=az)
-#        plt.draw(); 
-#        plt.pause(0.6)                  # short delay so you can see it
-#
-#    plt.show()
-#    plt.close(fig)  
-
-#=========old code get rid when working model done==========
 
 #use 5 fold cross validation to plot mean and standard dev of the predicition error vs C
 #use errorbar funtion
@@ -287,7 +185,7 @@ for c in c_val:
     std_errors_lasso.append(np.std(mse_scores))
     
     #do the same for ridge
-for c in c_val:
+for c in c_val_ridge:
     ridge_model = Ridge(alpha=c, max_iter=10000)
     #cross_val_score uses negative MSE
     neg_mse_scores = cross_val_score(ridge_model, X_poly, y, cv=5, scoring='neg_mean_squared_error')
@@ -308,3 +206,131 @@ plt.ylabel('Mean Squared Error')
 plt.title('Mean Squared Error vs C for Lasso and Ridge Regression')
 plt.legend()
 plt.show()
+
+#lassos final zero coeffs is 1
+#ridge never zeros out but coeffes get very small visibly at 1000
+
+# =========make plots for mse of train and test data against c values for both lasso and ridge=========
+train_mse_lasso = []
+test_mse_lasso = []
+train_mse_ridge = []
+test_mse_ridge = []
+#maybe reuse c_val and c_val_ridge and see if i saved the models in an array with their c values
+for c, lasso_model in models:
+    #use cross_val_score to get mse for train data
+    neg_mse_scores = cross_val_score(lasso_model, X_train, y_train, cv=5, scoring='neg_mean_squared_error')
+    mse_scores = -neg_mse_scores
+    train_mse_lasso.append(np.mean(mse_scores))
+    #get mse vals for test data - make another array above to hold them so i can do it in the same format
+    #use crossval_score to get mse for test data
+    neg_mse_scores_test = cross_val_score(lasso_model, X_test, y_test, cv=5, scoring='neg_mean_squared_error')
+    mse_scores_test = -neg_mse_scores_test
+    test_mse_lasso.append(np.mean(mse_scores_test))
+    
+#copy for ridge
+for c, ridge_model in models_ridge:
+    #use cross_val_score to get mse for train data
+    neg_mse_scores = cross_val_score(ridge_model, X_train, y_train, cv=5, scoring='neg_mean_squared_error')
+    mse_scores = -neg_mse_scores
+    train_mse_ridge.append(np.mean(mse_scores))
+    #get mse vals for test data - make another array above to hold them so i can do it in the same format
+    #use crossval_score to get mse for test data
+    neg_mse_scores_test = cross_val_score(ridge_model, X_test, y_test, cv=5, scoring='neg_mean_squared_error')
+    mse_scores_test = -neg_mse_scores_test
+    test_mse_ridge.append(np.mean(mse_scores_test))
+    
+#make 2 plots one for lasso one for ridge 
+plt.figure()
+plt.plot(c_val, train_mse_lasso, '-o', label='Train MSE', markersize=6)
+plt.plot(c_val, test_mse_lasso, '-s', label='Test MSE', markersize=6)
+plt.xscale('log')
+plt.xlabel('C (alpha)')
+plt.ylabel('Mean Squared Error')
+plt.title('Lasso Regression: Train and Test MSE vs C')
+plt.legend()
+plt.show()
+
+
+plt.figure()
+plt.plot(c_val_ridge, train_mse_ridge, '-o', label='Train MSE', markersize=6)
+plt.plot(c_val_ridge, test_mse_ridge, '-s', label='Test MSE', markersize=6)
+plt.xscale('log')
+plt.xlabel('C (alpha)')
+plt.ylabel('Mean Squared Error')
+plt.title('Ridge Regression: Train and Test MSE vs C')
+plt.legend()
+plt.show()
+
+ 
+ 
+ #=======================print statements for report=======================
+ # make pretty feature names like x1, x2, x1^2, x1 x2, ...
+feat_names = poly.get_feature_names_out(input_features=['x1','x2'])
+
+def model_to_formula(estimator, feat_names, *,
+                     decimals=4, zero_thresh=1e-8, sort_by='abs',
+                     latex=False):
+    """
+    Return a copy-pasteable string of the fitted model:
+      ŷ = intercept + Σ coef_i * term_i
+    - decimals: rounding for coefficients
+    - zero_thresh: treat very small coeffs as zero (cleaner for Lasso)
+    - sort_by: 'abs' (by |coef|), 'value' (by coef), or None (original order)
+    - latex: if True, return a LaTeX equation string
+    """
+    coefs = estimator.coef_.ravel()
+    intercept = float(getattr(estimator, "intercept_", 0.0))
+
+    # filter tiny coefficients
+    terms = [(name, c) for name, c in zip(feat_names, coefs) if abs(c) > zero_thresh]
+
+    # sorting for readability
+    if sort_by == 'abs':
+        terms.sort(key=lambda t: abs(t[1]), reverse=True)
+    elif sort_by == 'value':
+        terms.sort(key=lambda t: t[1], reverse=True)
+
+    # builders
+    def fmt(c):
+        s = f"{c:.{decimals}f}"
+        # strip "-0.0000" type artifacts
+        return "0" if abs(c) < zero_thresh else s
+
+    if not latex:
+        pieces = [f"{fmt(intercept)}"]
+        for name, c in terms:
+            sign = " + " if c >= 0 else " - "
+            pieces.append(f"{sign}{abs(c):.{decimals}f}·{name}")
+        return "ŷ = " + "".join(pieces)
+
+    # LaTeX: turn x1^2 -> x_{1}^{2}, and x1 x2 -> x_{1} x_{2}
+    def latex_term(name):
+        parts = [p.strip() for p in name.split(" ")]
+        out = []
+        for p in parts:
+            if "^" in p:
+                base, powr = p.split("^")
+                idx = base[1:]  # 'x1' -> '1'
+                out.append(rf"x_{{{idx}}}^{{{powr}}}")
+            else:
+                idx = p[1:]
+                out.append(rf"x_{{{idx}}}")
+        return " ".join(out)
+
+    pieces = [f"{fmt(intercept)}"]
+    for name, c in terms:
+        sign = " + " if c >= 0 else " - "
+        pieces.append(f"{sign}{abs(c):.{decimals}f}\\,{latex_term(name)}")
+    return r"$\hat{y} = " + "".join(pieces) + r"$"
+   
+# Lasso models
+for c, mdl in models:
+    print(f"\nLasso (alpha={c}):")
+    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs'))
+    # LaTeX version for your report:
+    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs', latex=True))
+
+# Ridge models
+for c, mdl in models_ridge:
+    print(f"\nRidge (alpha={c}):")
+    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs'))

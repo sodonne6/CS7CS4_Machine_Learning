@@ -30,8 +30,10 @@ X1_neg = X1[y == -1]
 X2_pos = X2[y == 1]
 X2_neg = X2[y == -1]
 
+#s -s size
+
 plt.scatter(X1_pos, X2_pos, marker='+', color='g', label='Positive')
-plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30, linewidths=1, label='Negative')
+plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=20, linewidths=1, label='Negative')
 plt.xlabel('X_1')
 plt.ylabel('X_2')
 plt.title('a(i) - 2D Scatter Plot')
@@ -82,8 +84,8 @@ ys = -(w1/w2) * x1_range - (b/w2) #corresponding x2 values for the decision boun
 plt.plot(x1_range, ys, color='red', linestyle='--', label='Decision Boundary')
 
 # Labels
-plt.xlabel("x₁")
-plt.ylabel("x₂")
+plt.xlabel("x1")
+plt.ylabel("x2")
 plt.title("Logistic Regression Classifier (a(ii) & a(iii))")
 plt.legend()
 plt.show()
@@ -91,13 +93,13 @@ plt.show()
 #lets add 5-fold cross validation just to see how it works - will implement properly in next assignment ;)
 cross_val = StratifiedKFold(n_splits=5,shuffle=True, random_state=42)
 log_cross_val_scores = cross_val_score(model, X, y, cv=cross_val,scoring='accuracy')
-print(f"5-Fold cross validation scores: {log_cross_val_scores}")
+#print("5-Fold cross validation scores:", {log_cross_val_scores})
 print(f"Mean cross validation score: {np.mean(log_cross_val_scores)}")
 #a(iii) - plot the training data and the decision boundary
 
 #5 fold cross val for svm - use c = 1 for direct comparison
 svm_cross_val_scores = cross_val_score(LinearSVC(C=1, max_iter=10000), X, y, cv=cross_val, scoring='accuracy')
-print(f"SVM 5-Fold cross validation scores: {svm_cross_val_scores}")
+#print("SVM 5-Fold cross validation scores:", {svm_cross_val_scores})
 print(f"SVM Mean cross validation score: {np.mean(svm_cross_val_scores)}")
 
 
@@ -125,11 +127,11 @@ for i in range(len(C_values)):
     y_svm_pred = svm_model.predict(X_test)
     w1_svm, w2_svm = svm_model.coef_[0]
     b_svm = svm_model.intercept_[0]
-    print(f"b(i) - SVM Weights: w1 = {w1_svm}, w2 = {w2_svm}, Bias: b = {b_svm}")
+    print("b(i)  SVM Weights: w1 =", w1_svm, "w2 =", w2_svm, "Bias: b =", b_svm)
 
     #accuracy for SVM
     svm_acc = accuracy_score(y_test, y_svm_pred)
-    print(f"b(i) - SVM Accuracy: {svm_acc}")
+    print("b(i)  SVM Accuracy:", svm_acc)
 
 
     #plot the training and predicted points and decision boundary for SVM
@@ -148,8 +150,8 @@ for i in range(len(C_values)):
     ys_svm_store.append(ys_svm) #store for later if needed
     plt.plot(x1_range, ys_svm, color='red', linestyle='--', label='SVM Decision Boundary')
     # Labels
-    plt.xlabel("x₁")
-    plt.ylabel("x₂")
+    plt.xlabel("x1")
+    plt.ylabel("x2")
     plt.title("SVM Classifier C = " + str(C_values[i]) + " (b(i))")
     plt.legend()
     plt.show()
@@ -170,8 +172,8 @@ for i in range(len(C_values)):
 ys_logistic = -(w1/w2) * x1_range - (b/w2)
 plt.plot(x1_range, ys_logistic, color='yellow', linestyle='-', label='Logistic Regression Decision Boundary')
 # Labels
-plt.xlabel("x₁")  
-plt.ylabel("x₂")
+plt.xlabel("x1")  
+plt.ylabel("x2")
 plt.title("SVM Classifier Decision Boundaries")
 plt.legend()
 plt.show()
@@ -195,7 +197,7 @@ model_ext.fit(X_ext_train, y_train)
 
 w = model_ext.coef_[0] #weights for X1, X2, X1^2, X2^2
 b_ext = model_ext.intercept_[0] #bias term
-print(f"c(i) - Extended Logistic Regression Weights: w1 = {w[0]}, w2 = {w[1]}, w3 = {w[2]}, w4 = {w[3]}, Bias: b = {b_ext}")
+print(f"c(i) - extended logistic regression weights: w1 = {w[0]}, w2 = {w[1]}, w3 = {w[2]}, w4 = {w[3]}, Bias: b = {b_ext}")
 y_ext_pred = model_ext.predict(X_ext_test)
 
 
@@ -217,7 +219,12 @@ plt.show()
     
 #c(iii) compare performance with reasonable baseline predictor 
 #baseline - predict the most frequent class in the training set
-most_freq_class = y_train.mode()[0]
+#y_train is all +1 and -1 so if the sum of +1 is greater than sum of -1 then its the most freuent class
+#use >= in case they are equal
+if(np.sum(y_train == 1) >= np.sum(y_train == -1)):
+    most_freq_class = 1
+else:
+    most_freq_class = -1
 baseline_pred = np.full(y_test.shape, most_freq_class)
 #calculate accuracy for baseline logistic regression and extended logistic regression
 baseline_acc = accuracy_score(y_test, baseline_pred)
@@ -247,16 +254,16 @@ plt.show()
 #c(iv) - bonus - plot the classifier boundary 
 #have to solve a quadratic equation to get the decision boundary
 x1_range = np.linspace(X1.min(), X1.max(), 400)
-a = w[3]
-b = w[1]
+a = w[3] #a component
+b = w[1] #b component
 c = w[0]*x1_range + w[2]*x1_range**2 + b_ext
 discriminant = b**2 - 4*a*c
 #only consider points where discriminant is non-negative
-valid = discriminant >= 0
-x1_valid = x1_range[valid]
-sqrt_discriminant = np.sqrt(discriminant[valid])
-x2_pos = (-b + sqrt_discriminant) / (2*a)
-x2_neg = (-b - sqrt_discriminant) / (2*a)
+non_neg = discriminant >= 0
+x1_non_neg = x1_range[non_neg]
+sqrt_discrim = np.sqrt(discriminant[non_neg])
+x2_pos = (-b + sqrt_discrim) / (2*a)
+x2_neg = (-b - sqrt_discrim) / (2*a)
 #plot the decision boundary along with data points
 plt.figure(figsize=(8, 6))
 #plot OG data points
@@ -267,7 +274,7 @@ plt.scatter(X_test[y_ext_pred == 1, 0], X_test[y_ext_pred == 1, 1], marker='x', 
 plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
 #plot decision boundary
 #plt.plot(x1_valid, x2_pos, color='red', linestyle='--', label='Decision Boundary (Upper)')
-plt.plot(x1_valid, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
+plt.plot(x1_non_neg, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
 # Labels
 plt.xlabel("x1")
 plt.ylabel("x2")
