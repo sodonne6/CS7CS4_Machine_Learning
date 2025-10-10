@@ -84,8 +84,8 @@ ys = -(w1/w2) * x1_range - (b/w2) #corresponding x2 values for the decision boun
 plt.plot(x1_range, ys, color='red', linestyle='--', label='Decision Boundary')
 
 # Labels
-plt.xlabel("x1")
-plt.ylabel("x2")
+plt.xlabel("x_1")
+plt.ylabel("x_2")
 plt.title("Logistic Regression Classifier (a(ii) & a(iii))")
 plt.legend()
 plt.show()
@@ -127,11 +127,11 @@ for i in range(len(C_values)):
     y_svm_pred = svm_model.predict(X_test)
     w1_svm, w2_svm = svm_model.coef_[0]
     b_svm = svm_model.intercept_[0]
-    print("b(i)  SVM Weights: w1 =", w1_svm, "w2 =", w2_svm, "Bias: b =", b_svm)
+    print("b(i)SVM Weights: w1 =", w1_svm, "w2 =", w2_svm, "Bias: b =", b_svm)
 
     #accuracy for SVM
     svm_acc = accuracy_score(y_test, y_svm_pred)
-    print("b(i)  SVM Accuracy:", svm_acc)
+    print("b(i)SVM Accuracy:", svm_acc)
 
 
     #plot the training and predicted points and decision boundary for SVM
@@ -150,8 +150,8 @@ for i in range(len(C_values)):
     ys_svm_store.append(ys_svm) #store for later if needed
     plt.plot(x1_range, ys_svm, color='red', linestyle='--', label='SVM Decision Boundary')
     # Labels
-    plt.xlabel("x1")
-    plt.ylabel("x2")
+    plt.xlabel("x_1")
+    plt.ylabel("x_2")
     plt.title("SVM Classifier C = " + str(C_values[i]) + " (b(i))")
     plt.legend()
     plt.show()
@@ -169,11 +169,11 @@ for i in range(len(C_values)):
     #make array of strings containing colors and iterate through at the same time as C_values
     plt.plot(x1_range, ys_svm_store[i], linestyle='--', label='SVM Decision Boundary C=' + str(C_values[i]), color=colors[i])
 #now plot the logistic regression decision boundary for comparison
-ys_logistic = -(w1/w2) * x1_range - (b/w2)
-plt.plot(x1_range, ys_logistic, color='yellow', linestyle='-', label='Logistic Regression Decision Boundary')
+ys_log = -(w1/w2) * x1_range - (b/w2)
+plt.plot(x1_range, ys_log, color='yellow', linestyle='-', label='Logistic Regression Decision Boundary')
 # Labels
-plt.xlabel("x1")  
-plt.ylabel("x2")
+plt.xlabel("x_1")  
+plt.ylabel("x_2")
 plt.title("SVM Classifier Decision Boundaries")
 plt.legend()
 plt.show()
@@ -210,8 +210,8 @@ plt.scatter(X1_neg, X2_neg, marker='o', facecolors='none', edgecolors='b', s=30,
 plt.scatter(X_test[y_ext_pred == 1, 0], X_test[y_ext_pred == 1, 1], marker='x', color='orange', label='Predicted Positive', alpha=0.5)
 plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.', color='purple', label='Predicted Negative', alpha=0.5)
 # Labels
-plt.xlabel("x1")
-plt.ylabel("x2")
+plt.xlabel("x_1")
+plt.ylabel("x_2")
 plt.title("Logistic Regression Classifier with Square of Each Feature (c(i))")
 plt.legend()
 plt.show()
@@ -245,8 +245,8 @@ plt.figure(figsize=(8, 6))
 plt.bar(x, accuracies, width, color=['red', 'blue', 'orange'])
 plt.xticks(x, labels)
 plt.ylim(0, 1)
-plt.ylabel('Accuracy')
-plt.xlabel('Model')
+plt.ylabel('Accuracy')  
+plt.xlabel('Model')  
 plt.title('c(iii) - Model Accuracy Comparison')
 plt.grid(axis='y', alpha=0.2)
 plt.show()
@@ -276,8 +276,8 @@ plt.scatter(X_test[y_ext_pred == -1, 0], X_test[y_ext_pred == -1, 1], marker='.'
 #plt.plot(x1_valid, x2_pos, color='red', linestyle='--', label='Decision Boundary (Upper)')
 plt.plot(x1_non_neg, x2_neg, color='red', linestyle='--', label='Decision Boundary (Lower)')
 # Labels
-plt.xlabel("x1")
-plt.ylabel("x2")
+plt.xlabel("x_1")
+plt.ylabel("x_2")
 plt.title("Extended Logistic Regression Decision Boundary (c(iv))")
 plt.legend()
 plt.show()
