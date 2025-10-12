@@ -32,9 +32,12 @@ plt.show()
 
 #contour map of y against x1 and x2 to assess if plane or curved surface
 plt.figure()
-plt.tricontourf(X[:,0], X[:,1], y, levels=12)
-plt.scatter(X[:,0], X[:,1], s=12, alpha=0.6)
-plt.xlabel("x1"); plt.ylabel("x2"); plt.title("y contours"); plt.colorbar(label="y")
+plt.tricontourf(X[:,0],X[:,1],y,levels=15)
+plt.scatter(X[:,0],X[:,1],s=12,alpha=0.6)
+plt.xlabel("x1"); 
+plt.ylabel("x2"); 
+plt.title("y contours"); 
+plt.colorbar(label="y")
 plt.show()
 
 #in addition to the two features in data file add extra polynomial features equal to all combinations of powers 
@@ -77,10 +80,11 @@ x1_min, x1_max = X[:,0].min()-exstension, X[:,0].max()+exstension #set the min a
 x2_min, x2_max = X[:,1].min()-exstension, X[:,1].max()+exstension #change the extension value to get the best view
 
 #create grid - use the range defined above to define the limits of the grid
-grid_x1 = np.linspace(x1_min, x1_max, 140)
-grid_x2 = np.linspace(x2_min, x2_max, 140)
+grid_x1 = np.linspace(x1_min, x1_max, 150)
+grid_x2 = np.linspace(x2_min, x2_max, 150)
 #for loop taken from the assignment brief
 Xtest = []
+#change these around to match surface to x1 and x2 axis
 for i in grid_x1:          
     for j in grid_x2:
         Xtest.append([i, j])
@@ -91,17 +95,19 @@ Xtest_poly = poly.transform(Xtest)
 
 #meshgrid creates 2d array of the x1 and x2 values for plotting
 X1grid, X2grid = np.meshgrid(grid_x1, grid_x2)
-gridLenX, gridLenY = len(grid_x1), len(grid_x2) #get lengths
 zmin, zmax = -1.0, 3.0  #match raw data y output range to lock z axis on plots
 
 for c, lasso_model in models:
-    Z = lasso_model.predict(Xtest_poly).reshape(gridLenY, gridLenX) #predict using the transformed test data and reshape to match the grid shape
-
+    Z = lasso_model.predict(Xtest_poly)#predict using the transformed test data and reshape to match the grid shape
+    gridx1_len, gridx2_len = len(grid_x1), len(grid_x2)
+    Z = Z.reshape(gridx2_len, gridx1_len).T
+    #Z = lasso_model.predict(Xtest_poly).reshape(X1grid.shape) #reshape to match the grid shape
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     #ax.set_proj_type('ortho')  # less perspective distortion
     #plot surface and training points
-    surf = ax.plot_surface(X1grid, X2grid, Z, alpha=0.35, linewidth=0, antialiased=False, label='Predicted surface')
+    surf = ax.plot_surface(X1grid, X2grid, Z, alpha=0.35, linewidth=0, label='Predicted surface')
+   
     ax.scatter(X[:,0], X[:,1], y, s=22, c='r', depthshade=False, label='Training data')
 
     #lock axes to the tight box to avoid the problem of massive autoscaling
@@ -109,9 +115,11 @@ for c, lasso_model in models:
     ax.set_ylim(grid_x2.min(), grid_x2.max())
     ax.set_zlim(zmin, zmax)
     
-    ax.view_init(elev=25, azim=35)
-    ax.set_xlabel("x1"); ax.set_ylabel("x2"); ax.set_zlabel("predicted y")
-    ax.set_title(f"Lasso Surface (alpha={c})")
+    ax.view_init(elev=25, azim=35) #change to suit the viewing angle
+    ax.set_xlabel("x1"); 
+    ax.set_ylabel("x2"); 
+    ax.set_zlabel("predicted y")
+    ax.set_title(f"Lasso surface (alpha={c})")
     ax.legend()
     plt.show()
 
@@ -149,8 +157,9 @@ Xtest = np.array(Xtest)
 #expand with polynomial transformer - already done for lasso so reuse
 
 for c, ridge_model in models_ridge:
-    ridge_Z = ridge_model.predict(Xtest_poly).reshape(gridLenY, gridLenX) #predict using the transformed test data and reshape to match the grid shape
-    
+    ridge_Z = ridge_model.predict(Xtest_poly) #predict using the transformed test data and reshape to match the grid shape
+    gridx1_len, gridx2_len = len(grid_x1), len(grid_x2)
+    ridge_Z = ridge_Z.reshape(gridx2_len, gridx1_len).T
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
@@ -268,61 +277,76 @@ plt.show()
 feat_names = poly.get_feature_names_out(input_features=['x1','x2'])
 
 def model_to_formula(estimator, feat_names, *,
-                     decimals=4, zero_thresh=1e-8, sort_by='abs',
-                     latex=False):
+                     decimals=4,
+                     zero_thresh=1e-6,   # raise this for Ridge, e.g. 1e-3 or 5e-3
+                     sort_by='abs',      # 'abs' | 'value' | None
+                     top_k=None,         # e.g. 12 to show only the largest terms
+                     latex=False,
+                     line_break_every=6  # add newlines for readability (text mode)
+                     ):
     """
     Return a copy-pasteable string of the fitted model:
-      ŷ = intercept + Σ coef_i * term_i
-    - decimals: rounding for coefficients
-    - zero_thresh: treat very small coeffs as zero (cleaner for Lasso)
+      ŷ = intercept + Σ coef_i · term_i
+
+    - zero_thresh: drop tiny coefficients (very useful for Ridge)
+    - top_k: keep only the largest |coef| terms
     - sort_by: 'abs' (by |coef|), 'value' (by coef), or None (original order)
-    - latex: if True, return a LaTeX equation string
+    - latex: return a LaTeX equation string if True
     """
-    coefs = estimator.coef_.ravel()
+    # coef_ can be (n_features,) or (1, n_features); flatten safely
+    coefs = np.ravel(getattr(estimator, "coef_", np.array([])))
     intercept = float(getattr(estimator, "intercept_", 0.0))
 
-    # filter tiny coefficients
-    terms = [(name, c) for name, c in zip(feat_names, coefs) if abs(c) > zero_thresh]
+    # sanity check to avoid mismatches
+    assert len(coefs) == len(feat_names), \
+        f"coef length {len(coefs)} != feature names length {len(feat_names)}"
 
-    # sorting for readability
+    # filter tiny coefficients
+    terms = [(name, float(c)) for name, c in zip(feat_names, coefs)
+             if abs(c) > zero_thresh]
+
+    # sorting
     if sort_by == 'abs':
         terms.sort(key=lambda t: abs(t[1]), reverse=True)
     elif sort_by == 'value':
         terms.sort(key=lambda t: t[1], reverse=True)
 
-    # builders
+    # keep only the largest K if requested
+    if top_k is not None and len(terms) > top_k:
+        terms = terms[:top_k]
+
     def fmt(c):
-        s = f"{c:.{decimals}f}"
-        # strip "-0.0000" type artifacts
-        return "0" if abs(c) < zero_thresh else s
+        # avoid "-0.0000"
+        if abs(c) < zero_thresh: 
+            return "0"
+        return f"{c:.{decimals}f}"
 
     if not latex:
-        pieces = [f"{fmt(intercept)}"]
-        for name, c in terms:
+        pieces = [fmt(intercept)]
+        for idx, (name, c) in enumerate(terms, 1):
             sign = " + " if c >= 0 else " - "
             pieces.append(f"{sign}{abs(c):.{decimals}f}·{name}")
+            if line_break_every and idx % line_break_every == 0 and idx != len(terms):
+                pieces.append("\n    ")
         return "ŷ = " + "".join(pieces)
 
-    # LaTeX: turn x1^2 -> x_{1}^{2}, and x1 x2 -> x_{1} x_{2}
+    # LaTeX formatting
     def latex_term(name):
-        parts = [p.strip() for p in name.split(" ")]
+        # 'x1^3 x2^2' -> 'x_{1}^{3} x_{2}^{2}'
         out = []
-        for p in parts:
-            if "^" in p:
-                base, powr = p.split("^")
-                idx = base[1:]  # 'x1' -> '1'
-                out.append(rf"x_{{{idx}}}^{{{powr}}}")
+        for part in name.split():
+            if "^" in part:
+                base, pwr = part.split("^")
+                out.append(rf"x_{{{base[1:]}}}^{{{pwr}}}")
             else:
-                idx = p[1:]
-                out.append(rf"x_{{{idx}}}")
+                out.append(rf"x_{{{part[1:]}}}")
         return " ".join(out)
 
-    pieces = [f"{fmt(intercept)}"]
-    for name, c in terms:
+    pieces = [fmt(intercept)]
+    for (name, c) in terms:
         sign = " + " if c >= 0 else " - "
         pieces.append(f"{sign}{abs(c):.{decimals}f}\\,{latex_term(name)}")
-    return r"$\hat{y} = " + "".join(pieces) + r"$"
-   
+    return r"$\hat{y} = " + "".join(pieces) + r"$"   
 # Lasso models
 for c, mdl in models:
     print(f"\nLasso (alpha={c}):")
