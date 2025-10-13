@@ -106,7 +106,7 @@ for c, lasso_model in models:
     ax = fig.add_subplot(111, projection='3d')
     #ax.set_proj_type('ortho')  # less perspective distortion
     #plot surface and training points
-    surf = ax.plot_surface(X1grid, X2grid, Z, alpha=0.35, linewidth=0, label='Predicted surface')
+    surf = ax.plot_surface(X1grid, X2grid, Z, alpha=0.35, linewidth=0, antialiased=False, label='Predicted surface')
    
     ax.scatter(X[:,0], X[:,1], y, s=22, c='r', depthshade=False, label='Training data')
 
@@ -224,17 +224,25 @@ train_mse_lasso = []
 test_mse_lasso = []
 train_mse_ridge = []
 test_mse_ridge = []
+train_mse_lasso_std = []
+test_mse_lasso_std = []
+train_mse_ridge_std = []
+test_mse_ridge_std = []
 #maybe reuse c_val and c_val_ridge and see if i saved the models in an array with their c values
 for c, lasso_model in models:
     #use cross_val_score to get mse for train data
     neg_mse_scores = cross_val_score(lasso_model, X_train, y_train, cv=5, scoring='neg_mean_squared_error')
     mse_scores = -neg_mse_scores
     train_mse_lasso.append(np.mean(mse_scores))
+    ##add in std dev
+    train_mse_lasso_std.append(np.std(mse_scores))
     #get mse vals for test data - make another array above to hold them so i can do it in the same format
     #use crossval_score to get mse for test data
     neg_mse_scores_test = cross_val_score(lasso_model, X_test, y_test, cv=5, scoring='neg_mean_squared_error')
     mse_scores_test = -neg_mse_scores_test
     test_mse_lasso.append(np.mean(mse_scores_test))
+    ##add in std dev
+    test_mse_lasso_std.append(np.std(mse_scores_test))
     
 #copy for ridge
 for c, ridge_model in models_ridge:
@@ -242,16 +250,32 @@ for c, ridge_model in models_ridge:
     neg_mse_scores = cross_val_score(ridge_model, X_train, y_train, cv=5, scoring='neg_mean_squared_error')
     mse_scores = -neg_mse_scores
     train_mse_ridge.append(np.mean(mse_scores))
+    #add in std dev of mse so i can plot error bars on the graph
+    train_mse_ridge_std.append(np.std(mse_scores))
     #get mse vals for test data - make another array above to hold them so i can do it in the same format
     #use crossval_score to get mse for test data
     neg_mse_scores_test = cross_val_score(ridge_model, X_test, y_test, cv=5, scoring='neg_mean_squared_error')
     mse_scores_test = -neg_mse_scores_test
     test_mse_ridge.append(np.mean(mse_scores_test))
+    ##add in std dev
+    test_mse_ridge_std.append(np.std(mse_scores_test))
     
-#make 2 plots one for lasso one for ridge 
+#debug std dev arrays
+#10 c values are used so the std dev arrays should also have 10 values
+print("c_val length:", len(c_val))
+print(f"Lasso Train MSE Std Dev: {train_mse_lasso_std}")
+print(f"Lasso Test MSE Std Dev: {test_mse_lasso_std}")
+print(f"Ridge Train MSE Std Dev: {train_mse_ridge_std}")
+print(f"Ridge Test MSE Std Dev: {test_mse_ridge_std}")
+
+#make 2 plots one for lasso one for ridge
 plt.figure()
+#plot mean mse scores
 plt.plot(c_val, train_mse_lasso, '-o', label='Train MSE', markersize=6)
 plt.plot(c_val, test_mse_lasso, '-s', label='Test MSE', markersize=6)
+#plot std dev as error bars
+plt.errorbar(c_val, train_mse_lasso, yerr=train_mse_lasso_std, fmt='o', capsize=5, alpha=0.5)
+plt.errorbar(c_val, test_mse_lasso, yerr=test_mse_lasso_std, fmt='s', capsize=5, alpha=0.5)
 plt.xscale('log')
 plt.xlabel('C (alpha)')
 plt.ylabel('Mean Squared Error')
@@ -263,98 +287,11 @@ plt.show()
 plt.figure()
 plt.plot(c_val_ridge, train_mse_ridge, '-o', label='Train MSE', markersize=6)
 plt.plot(c_val_ridge, test_mse_ridge, '-s', label='Test MSE', markersize=6)
+plt.errorbar(c_val_ridge, train_mse_ridge, yerr=train_mse_ridge_std, fmt='o', capsize=5, alpha=0.5)
+plt.errorbar(c_val_ridge, test_mse_ridge, yerr=test_mse_ridge_std, fmt='s', capsize=5, alpha=0.5)
 plt.xscale('log')
 plt.xlabel('C (alpha)')
 plt.ylabel('Mean Squared Error')
 plt.title('Ridge Regression: Train and Test MSE vs C')
 plt.legend()
 plt.show()
-
- 
- 
- #=======================print statements for report=======================
- # make pretty feature names like x1, x2, x1^2, x1 x2, ...
-feat_names = poly.get_feature_names_out(input_features=['x1','x2'])
-
-def model_to_formula(estimator, feat_names, *,
-                     decimals=4,
-                     zero_thresh=1e-6,   # raise this for Ridge, e.g. 1e-3 or 5e-3
-                     sort_by='abs',      # 'abs' | 'value' | None
-                     top_k=None,         # e.g. 12 to show only the largest terms
-                     latex=False,
-                     line_break_every=6  # add newlines for readability (text mode)
-                     ):
-    """
-    Return a copy-pasteable string of the fitted model:
-      ŷ = intercept + Σ coef_i · term_i
-
-    - zero_thresh: drop tiny coefficients (very useful for Ridge)
-    - top_k: keep only the largest |coef| terms
-    - sort_by: 'abs' (by |coef|), 'value' (by coef), or None (original order)
-    - latex: return a LaTeX equation string if True
-    """
-    # coef_ can be (n_features,) or (1, n_features); flatten safely
-    coefs = np.ravel(getattr(estimator, "coef_", np.array([])))
-    intercept = float(getattr(estimator, "intercept_", 0.0))
-
-    # sanity check to avoid mismatches
-    assert len(coefs) == len(feat_names), \
-        f"coef length {len(coefs)} != feature names length {len(feat_names)}"
-
-    # filter tiny coefficients
-    terms = [(name, float(c)) for name, c in zip(feat_names, coefs)
-             if abs(c) > zero_thresh]
-
-    # sorting
-    if sort_by == 'abs':
-        terms.sort(key=lambda t: abs(t[1]), reverse=True)
-    elif sort_by == 'value':
-        terms.sort(key=lambda t: t[1], reverse=True)
-
-    # keep only the largest K if requested
-    if top_k is not None and len(terms) > top_k:
-        terms = terms[:top_k]
-
-    def fmt(c):
-        # avoid "-0.0000"
-        if abs(c) < zero_thresh: 
-            return "0"
-        return f"{c:.{decimals}f}"
-
-    if not latex:
-        pieces = [fmt(intercept)]
-        for idx, (name, c) in enumerate(terms, 1):
-            sign = " + " if c >= 0 else " - "
-            pieces.append(f"{sign}{abs(c):.{decimals}f}·{name}")
-            if line_break_every and idx % line_break_every == 0 and idx != len(terms):
-                pieces.append("\n    ")
-        return "ŷ = " + "".join(pieces)
-
-    # LaTeX formatting
-    def latex_term(name):
-        # 'x1^3 x2^2' -> 'x_{1}^{3} x_{2}^{2}'
-        out = []
-        for part in name.split():
-            if "^" in part:
-                base, pwr = part.split("^")
-                out.append(rf"x_{{{base[1:]}}}^{{{pwr}}}")
-            else:
-                out.append(rf"x_{{{part[1:]}}}")
-        return " ".join(out)
-
-    pieces = [fmt(intercept)]
-    for (name, c) in terms:
-        sign = " + " if c >= 0 else " - "
-        pieces.append(f"{sign}{abs(c):.{decimals}f}\\,{latex_term(name)}")
-    return r"$\hat{y} = " + "".join(pieces) + r"$"   
-# Lasso models
-for c, mdl in models:
-    print(f"\nLasso (alpha={c}):")
-    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs'))
-    # LaTeX version for your report:
-    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs', latex=True))
-
-# Ridge models
-for c, mdl in models_ridge:
-    print(f"\nRidge (alpha={c}):")
-    print(model_to_formula(mdl, feat_names, decimals=4, zero_thresh=1e-6, sort_by='abs'))
