@@ -9,6 +9,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_curve, auc
+
 
 ## data id 
 #Dataset 1:
@@ -121,7 +123,7 @@ def log_reg_model_train_eval(X_train, X_test, y_train, y_test):
 
 #(b) - train a kNN classifier and use cross val to find best k val
 def knn_model_train_eval(X_train, X_test, y_train, y_test):
-    k_val = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    k_val = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,28]
     #create array to store accuracy results 
     knn_acc_results = np.zeros(len(k_val))
     knn_std_dev_results = np.zeros(len(k_val))
@@ -153,13 +155,13 @@ def train_best_params_log_reg(X_train,X_test,y_train,y_test,best_q,best_c):
     model = LogisticRegression(penalty = "l2", C=best_c, solver='liblinear', max_iter=1000)
     model.fit(x_train_poly,y_train)
     y_pred = model.predict(x_test_poly)
-    return y_pred
+    return y_pred, model, x_test_poly
 
 def train_best_params_knn(X_train,X_test,y_train,y_test,best_k):
     model = KNeighborsClassifier(n_neighbors=best_k)
     model.fit(X_train,y_train)
     y_pred = model.predict(X_test)
-    return y_pred
+    return y_pred , model
 #calculate confusion matrices for log and knn models with best parameters
 def confusion_matrices(y_test, y_pred_log, y_pred_knn):
     cm_log = confusion_matrix(y_test, y_pred_log)
@@ -188,6 +190,19 @@ def baseline_model_conf_mat(y_train,y_test):
 
     return cm_majority, cm_random
     
+def plot_roc(y_test, y_score=None, conf_matrix=None, label='Model'):
+    if y_score is not None:
+        y_true = np.where(y_test == -1, 0, y_test)  # ensure 0/1
+        fpr, tpr, _ = roc_curve(y_true, y_score)
+        plt.plot(fpr, tpr, label=f'{label} (AUC={auc(fpr,tpr):.2f})')
+    elif conf_matrix is not None:
+        TN, FP, FN, TP = conf_matrix.ravel()
+        FPR = FP / (FP + TN) if (FP + TN) else 0.0
+        TPR = TP / (TP + FN) if (TP + FN) else 0.0
+        plt.scatter(FPR, TPR, s=80, label=f'{label} (point)')
+    else:
+        raise ValueError("Provide y_score or conf_matrix")
+
 
 
 
@@ -205,8 +220,8 @@ def main():
     best_k = knn_model_train_eval(X_train, X_test, y_train, y_test)
     
     #call functions to train best models for both log and knn
-    y_pred_log = train_best_params_log_reg(X_train,X_test,y_train,y_test,best_q,best_c)
-    y_pred_knn = train_best_params_knn(X_train,X_test,y_train,y_test,best_k)
+    y_pred_log, logModel, x_test_poly = train_best_params_log_reg(X_train,X_test,y_train,y_test,best_q,best_c)
+    y_pred_knn, knnModel = train_best_params_knn(X_train,X_test,y_train,y_test,best_k)
     
     #get confusion matrices for both
     cm_log, cm_knn = confusion_matrices(y_test, y_pred_log, y_pred_knn)
@@ -216,15 +231,44 @@ def main():
     #get confusion matrices for baseline tests
     cm_most_common, cm_random = baseline_model_conf_mat(y_train,y_test)
     
-    #plot ROC curve using conf matrices
-    #plot_ROC(cm_log)
+    #get class probabilty
+    y_score_log = logModel.predict_proba(x_test_poly)[:, 1]   
+    y_score_knn = knnModel.predict_proba(X_test)[:, 1]
+    
+    # === plot ===
+    plt.figure()
+    plot_roc(y_test, y_score=y_score_log, label='Logistic Regression')
+    plot_roc(y_test, y_score=y_score_knn, label='kNN')
+    plot_roc(y_test, conf_matrix=cm_most_common, label='Baseline (Majority)')
+    plot_roc(y_test, conf_matrix=cm_random, label='Baseline (Random)')
+    plt.plot([0,1],[0,1],'k--'); plt.xlabel('FPR'); plt.ylabel('TPR'); plt.title('ROC'); plt.legend(loc='lower right'); plt.grid(); plt.show()
     
     #================dataset 2==================
     print("=================dataset 2==================")
     X_train, X_test, y_train, y_test = read_in_data('week4_dataset2')
-    log_reg_model_train_eval(X_train, X_test, y_train, y_test)
-    knn_model_train_eval(X_train, X_test, y_train, y_test)
+    best_q,best_c=log_reg_model_train_eval(X_train, X_test, y_train, y_test)
+    best_k=knn_model_train_eval(X_train, X_test, y_train, y_test)
     
+    #call functions to train best models for both log and knn
+    y_pred_log, logModel, x_test_poly = train_best_params_log_reg(X_train,X_test,y_train,y_test,best_q,best_c)
+    y_pred_knn, knnModel = train_best_params_knn(X_train,X_test,y_train,y_test,best_k)
+    
+    #get confusion matrices for both
+    cm_log, cm_knn = confusion_matrices(y_test, y_pred_log, y_pred_knn)
+    print(f"Confusion matrix for Logistic Regression model:\n{cm_log}")
+    print(f"Confusion matrix for kNN model:\n{cm_knn}")
+    
+    #get class probabilty
+    y_score_log = logModel.predict_proba(x_test_poly)[:, 1]   
+    y_score_knn = knnModel.predict_proba(X_test)[:, 1]
+    
+    # === plot ===
+    plt.figure()
+    plot_roc(y_test, y_score=y_score_log, label='Logistic Regression')
+    plot_roc(y_test, y_score=y_score_knn, label='kNN')
+    plot_roc(y_test, conf_matrix=cm_most_common, label='Baseline (Majority)')
+    plot_roc(y_test, conf_matrix=cm_random, label='Baseline (Random)')
+    plt.plot([0,1],[0,1],'k--'); plt.xlabel('FPR'); plt.ylabel('TPR'); plt.title('ROC'); plt.legend(loc='lower right'); plt.grid(); plt.show()
 if __name__ == "__main__":
     main()
 

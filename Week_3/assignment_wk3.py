@@ -189,6 +189,7 @@ for c in c_val:
     neg_mse_scores = cross_val_score(lasso_model, X_poly, y, cv=5, scoring='neg_mean_squared_error')
     #convert to pos
     mse_scores = -neg_mse_scores
+    print(mse_scores)
     ##append to array 
     mean_errors_lasso.append(np.mean(mse_scores))
     std_errors_lasso.append(np.std(mse_scores))
@@ -200,6 +201,7 @@ for c in c_val_ridge:
     neg_mse_scores = cross_val_score(ridge_model, X_poly, y, cv=5, scoring='neg_mean_squared_error')
     #convert to pos
     mse_scores = -neg_mse_scores
+    print(mse_scores)
     ##append to array 
     mean_errors_ridge.append(np.mean(mse_scores))
     std_errors_ridge.append(np.std(mse_scores))
@@ -207,11 +209,12 @@ for c in c_val_ridge:
 
 #make the plots 
 plt.figure()
-plt.errorbar(c_val, mean_errors_lasso, yerr=std_errors_lasso, fmt='-o', label='Lasso', capsize=5)
+plt.errorbar(c_val, mean_errors_lasso,yerr=std_errors_lasso, fmt='-o', label='Lasso', capsize=5)
 plt.errorbar(c_val, mean_errors_ridge, yerr=std_errors_ridge, fmt='-s', label='Ridge', capsize=5)
 plt.xscale('log')
-plt.xlabel('C (alpha)')
-plt.ylabel('Mean Squared Error')
+plt.xlabel('C')
+plt.ylabel('MSE')
+
 plt.title('Mean Squared Error vs C for Lasso and Ridge Regression')
 plt.legend()
 plt.show()
@@ -236,6 +239,7 @@ for c, lasso_model in models:
     train_mse_lasso.append(np.mean(mse_scores))
     ##add in std dev
     train_mse_lasso_std.append(np.std(mse_scores))
+    print(train_mse_lasso_std)
     #get mse vals for test data - make another array above to hold them so i can do it in the same format
     #use crossval_score to get mse for test data
     neg_mse_scores_test = cross_val_score(lasso_model, X_test, y_test, cv=5, scoring='neg_mean_squared_error')
@@ -262,24 +266,24 @@ for c, ridge_model in models_ridge:
     
 #debug std dev arrays
 #10 c values are used so the std dev arrays should also have 10 values
-print("c_val length:", len(c_val))
-print(f"Lasso Train MSE Std Dev: {train_mse_lasso_std}")
-print(f"Lasso Test MSE Std Dev: {test_mse_lasso_std}")
-print(f"Ridge Train MSE Std Dev: {train_mse_ridge_std}")
-print(f"Ridge Test MSE Std Dev: {test_mse_ridge_std}")
+print(len(c_val))
+print(f"Lasso Train Std Dev: {train_mse_lasso_std}")
+print(f"Lasso Test Std Dev: {test_mse_lasso_std}")
+print(f"Ridge Train Std Dev: {train_mse_ridge_std}")
+print(f"Ridge Test Std Dev: {test_mse_ridge_std}")
 
-#make 2 plots one for lasso one for ridge
+#lasso plot
 plt.figure()
 #plot mean mse scores
 plt.plot(c_val, train_mse_lasso, '-o', label='Train MSE', markersize=6)
 plt.plot(c_val, test_mse_lasso, '-s', label='Test MSE', markersize=6)
 #plot std dev as error bars
-plt.errorbar(c_val, train_mse_lasso, yerr=train_mse_lasso_std, fmt='o', capsize=5, alpha=0.5)
-plt.errorbar(c_val, test_mse_lasso, yerr=test_mse_lasso_std, fmt='s', capsize=5, alpha=0.5)
+plt.errorbar(c_val,train_mse_lasso, yerr=train_mse_lasso_std, fmt='o', capsize=5, alpha=0.5)
+plt.errorbar(c_val, test_mse_lasso,yerr=test_mse_lasso_std, fmt='s', capsize=5, alpha=0.5)
 plt.xscale('log')
-plt.xlabel('C (alpha)')
-plt.ylabel('Mean Squared Error')
-plt.title('Lasso Regression: Train and Test MSE vs C')
+plt.xlabel('C')
+plt.ylabel('MSE')
+plt.title('Lasso Regression: Train and Test MSE at different Regularisation Penalty')
 plt.legend()
 plt.show()
 
@@ -287,11 +291,11 @@ plt.show()
 plt.figure()
 plt.plot(c_val_ridge, train_mse_ridge, '-o', label='Train MSE', markersize=6)
 plt.plot(c_val_ridge, test_mse_ridge, '-s', label='Test MSE', markersize=6)
-plt.errorbar(c_val_ridge, train_mse_ridge, yerr=train_mse_ridge_std, fmt='o', capsize=5, alpha=0.5)
-plt.errorbar(c_val_ridge, test_mse_ridge, yerr=test_mse_ridge_std, fmt='s', capsize=5, alpha=0.5)
+plt.errorbar(c_val_ridge,train_mse_ridge, yerr=train_mse_ridge_std,fmt='o',capsize=5,alpha=0.5)
+plt.errorbar(c_val_ridge, test_mse_ridge,yerr=test_mse_ridge_std, fmt='s', capsize=5, alpha=0.5)
 plt.xscale('log')
-plt.xlabel('C (alpha)')
-plt.ylabel('Mean Squared Error')
-plt.title('Ridge Regression: Train and Test MSE vs C')
+plt.xlabel('C')
+plt.ylabel('MSE')
+plt.title('Ridge Regression: Train and Test MSE at different Regularisation Penalty')
 plt.legend()
 plt.show()
