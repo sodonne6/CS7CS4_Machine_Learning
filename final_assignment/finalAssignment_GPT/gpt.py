@@ -1,18 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-import csv
-import math
-import json, pathlib
-
-print("cuda available:", torch.cuda.is_available())
-if torch.cuda.is_available():
-    print("gpu:", torch.cuda.get_device_name(0))
-    
-    
-USE_RESIDUAL_ATTN = True   # residual around self-attention
-USE_RESIDUAL_FFN  = True   # residual around feed-forward
-USE_PRENORM       = False   # True: x = x + SA(LN(x))  ;  False: x = LN(x + SA(x))  (Post-LN)
 
 # hyperparameters
 batch_size = 64 # how many independent sequences will we process in parallel?
@@ -22,31 +10,21 @@ eval_interval = 500
 learning_rate = 3e-4
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 eval_iters = 200
-n_embd = 128  #128 , 160 , 96
-n_head = 4 #4,4,4
-n_layer = 3 #3,2,6
-dropout = 0.3
+n_embd = 384
+n_head = 6
+n_layer = 6
+dropout = 0.2
 # ------------
 
 torch.manual_seed(1337)
 
-# --- load all raw texts ---
-with open('input_childSpeech_trainingSet.txt', 'r', encoding='utf-8') as f:
-    child_train_text = f.read()
+# wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
+with open('input.txt', 'r', encoding='utf-8') as f:
+    text = f.read()
 
-with open('input_childSpeech_testSet.txt', 'r', encoding='utf-8') as f:
-    child_test_text = f.read()
-
-with open('input_shakespeare.txt', 'r', encoding='utf-8') as f:
-    shakespeare_text = f.read()
-
-# --- build vocabulary from the UNION of all datasets ---
-all_text = child_train_text + child_test_text + shakespeare_text
-chars = sorted(list(set(all_text)))      # CHANGED
+# here are all the unique characters that occur in this text
+chars = sorted(list(set(text)))
 vocab_size = len(chars)
-print(f'vocab size (union): {vocab_size}')
-print(f'Length of child TRAIN in characters: {len(child_train_text)}')
-
 # create a mapping from characters to integers
 stoi = { ch:i for i,ch in enumerate(chars) }
 itos = { i:ch for i,ch in enumerate(chars) }
@@ -54,7 +32,7 @@ encode = lambda s: [stoi[c] for c in s] # encoder: take a string, output a list 
 decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
 
 # Train and test splits
-data = torch.tensor(encode(child_train_text), dtype=torch.long)   # CHANGED
+data = torch.tensor(encode(text), dtype=torch.long)
 n = int(0.9*len(data)) # first 90% will be train, rest val
 train_data = data[:n]
 val_data = data[n:]
@@ -153,24 +131,8 @@ class Block(nn.Module):
         self.ln2 = nn.LayerNorm(n_embd)
 
     def forward(self, x):
-        if USE_PRENORM:
-            # Pre-LN (your current default)
-            attn_in  = self.ln1(x)
-            attn_out = self.sa(attn_in)
-            x = x + attn_out if USE_RESIDUAL_ATTN else attn_out
-
-            ffn_in  = self.ln2(x)
-            ffn_out = self.ffwd(ffn_in)
-            x = x + ffn_out if USE_RESIDUAL_FFN else ffn_out
-        else:
-            # Post-LN variant
-            attn_out = self.sa(x)
-            x = x + attn_out if USE_RESIDUAL_ATTN else attn_out
-            x = self.ln1(x)
-
-            ffn_out = self.ffwd(x)
-            x = x + ffn_out if USE_RESIDUAL_FFN else ffn_out
-            x = self.ln2(x)
+        x = x + self.sa(self.ln1(x))
+        x = x + self.ffwd(self.ln2(x))
         return x
 
 class GPTLanguageModel(nn.Module):
@@ -241,30 +203,12 @@ print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
 # create a PyTorch optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-#added myself - to make graphs of train and val loss at each step
-train_losses = []
-val_losses = []
-step_list = []
-log_train_ppl,  log_val_ppl  = [], []
-
 for iter in range(max_iters):
 
     # every once in a while evaluate the loss on train and val sets
     if iter % eval_interval == 0 or iter == max_iters - 1:
         losses = estimate_loss()
-        #store losses for step iter
-        train_loss = float(losses['train'])
-        val_loss = float(losses['val'])
-        train_ppl = math.exp(train_loss)
-        val_ppl = math.exp(val_loss)
-        
         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-        
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-        step_list.append(iter)
-        log_train_ppl.append(train_ppl);   
-        log_val_ppl.append(val_ppl)
 
     # sample a batch of data
     xb, yb = get_batch('train')
@@ -275,37 +219,7 @@ for iter in range(max_iters):
     loss.backward()
     optimizer.step()
 
-#generate from the model
+# generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
 print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
 #open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
-
-#write each models data for loss graphs to csv files
-with open('gpt_train_losses_model1_no_prenorm.csv', mode='w', newline='') as f:
-    writer = csv.writer(f)
-    writer.writerow(['step', 'train_loss', 'val_loss', 'train_ppl', 'val_ppl'])
-    for step, train_loss, val_loss, trn_ppl, vp in zip(step_list, train_losses, val_losses, log_train_ppl, log_val_ppl):
-        writer.writerow([step, train_loss, val_loss,trn_ppl, vp])
-
-#save the model after training
-#import json, pathlib
-
-#after training loop finishes
-#ckpt_path = "model1_best.pt"
-#torch.save({
-#    "state_dict": model.state_dict(),
-#    "config": {
-#        "USE_RESIDUAL_ATTN": USE_RESIDUAL_ATTN,
-#        "USE_RESIDUAL_FFN":  USE_RESIDUAL_FFN,
-#        "USE_PRENORM":       USE_PRENORM,
-#        "vocab_size": vocab_size,
-#        "block_size": block_size,
-#        "n_embd": n_embd,
-#        "n_head": n_head,
-#        "n_layer": n_layer,
-#        "dropout": dropout,
-#    },
-#    "chars": chars,   # to rebuild stoi/itos
-#}, ckpt_path)
-#
-#print(f"saved checkpoint -> {ckpt_path}")

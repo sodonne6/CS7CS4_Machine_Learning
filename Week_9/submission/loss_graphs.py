@@ -1,7 +1,7 @@
 import csv
 import matplotlib.pyplot as plt
 
-#
+
 def load_csv_loss_data(filename):
     steps = []
     train_losses = []
@@ -20,7 +20,7 @@ def load_csv_loss_data(filename):
     return steps, train_losses, val_losses 
 
 
-#plot data 
+# plot data 
 def plot_loss_per_step(steps, train_losses, val_losses, model_label):
     plt.plot(steps, train_losses, label='Train Loss')
     plt.plot(steps, val_losses, label='Validation Loss')
