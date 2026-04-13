@@ -2,7 +2,6 @@
 import random
 import os
 import csv
-import sympy as sp
 
 
 #need some flags for dataset generation - what operations to include
@@ -10,83 +9,91 @@ ADD_SUB = True
 MUL_DIV = True
 INTEGRALS = False
 DERIVATIVES = False
+TWOADD_MUL = True
+THREEADD = True
 
-OP="add_sub_div_mul" #name of operation for output files
+OP="add_sub_div_mul_3terms" #name of operation for output files
     
 SEED = 1337
-ADD_SUB_MIN, ADD_SUB_MAX = 0, 99
-MUL_DIV_MIN, MUL_DIV_MAX = -45, 45  # much easier space
+ADD_SUB_MIN, ADD_SUB_MAX = -99, 99
+MUL_DIV_MIN, MUL_DIV_MAX = -30, 30  # much easier space
 TEST_SET = 0.2 #percentage of data to reserve for testing
 
-OUT_DIR = "add_sub_div_mul/add_sub_div_mul_dataset" #directory to save dataset to
+OUT_DIR = "all_operations_balanced/dataset/all_ops_3terms" #directory to save dataset to
 
-def generate_add_sub(min_val, max_val,test_set):
-   train_lines = []
-   test_rows = []
-   
-   for i in range(min_val,max_val+1):
-       for j in range (min_val, max_val+1):
-           
-           #integer answer of add 
-           y_add = i + j
-           add_eq = f"{i}+{j}={y_add}\n"
-           prompt_add = f"{i}+{j}="
-           answer_add = str(y_add)
-           
-           if random.random() < test_set:
-               test_rows.append((prompt_add, answer_add,"+"))
-           else:
-               train_lines.append(add_eq)
-        
-           #subtraction - allow negative answers
-           
-           y_sub = i-j
-           sub_eq = f"{i}-{j}={y_sub}\n"
-           prompt_sub = f"{i}-{j}="
-           answer_sub = str(y_sub)
-           if random.random() < test_set:
-                test_rows.append((prompt_sub, answer_sub,"-"))
-           else:
-                train_lines.append(sub_eq)
-                    
-   return train_lines, test_rows
+def generate_add_sub(min_val, max_val):
+    examples = []
+    for i in range(min_val, max_val + 1):
+        for j in range(min_val, max_val + 1):
+            #add
+            y_add = i + j
+            examples.append((f"({i}) + ({j}) =", str(y_add), "+"))
 
-def generate_mul_div(min_val, max_val,test_set):
-    train_lines = []
-    test_rows = []
-    
-    for i in range(min_val,max_val+1):
-        for j in range (min_val, max_val+1):
-            #multiplication
+            #sub
+            y_sub = i - j
+            examples.append((f"({i}) - ({j}) =", str(y_sub), "-"))
+    return examples
+
+
+
+
+def generate_mul_div(mul_min=-99, mul_max=99, quot_min=-120, quot_max=120, div_min=1, div_max=20):
+    examples = []
+
+    #multiplication
+    for i in range(mul_min, mul_max + 1):
+        for j in range(mul_min, mul_max + 1):
             y_mul = i * j
-            mul_eq = f"{i}*{j}={y_mul}\n"
-            prompt_mul = f"{i}*{j}="
-            answer_mul = str(y_mul)
-            if random.random() < test_set:
-                test_rows.append((prompt_mul, answer_mul,"*"))
-            else:
-                train_lines.append(mul_eq)
-                
-            #division - only integer results, avoid div by 0
-            if j != 0:          #to change back to no decimals put this back in and i % j == 0
-                #y_div only to 2 decimal places
-                y_div = round(i / j, 2)
-                div_eq = f"{i}/{j}={y_div}\n"
-                prompt_div = f"{i}/{j}="
-                answer_div = str(y_div)
-                if random.random() < test_set:
-                    test_rows.append((prompt_div, answer_div,"/"))
-                else:
-                    train_lines.append(div_eq)
-    
-    #to be implemtted
-    return train_lines, test_rows
+            if keep_answer(y_mul):
+                examples.append((f"({i}) * ({j}) =", str(y_mul), "*"))
+
+     #division (exact integer quotients) - change to all answers later on maybe
+    for q in range(quot_min, quot_max + 1):
+        for d in range(div_min, div_max + 1):
+            dividend = q * d
+            divisor = d
+            if keep_answer(q) and keep_answer(dividend):
+                examples.append((f"({dividend}) / ({divisor}) =", str(q), "/"))
+
+    return examples
 
 #helping function to get correct answer for integrals and derivatives
 
-        
-   
+def generate_two_addsub_one_mul(n_examples_per_pattern=10000):
+    """Randomly sample expressions with two add/sub and one mul/div."""
+    examples = []
+    while len(examples) < 2 * n_examples_per_pattern:
+        i = random.randint(ADD_SUB_MIN, ADD_SUB_MAX)
+        j = random.randint(ADD_SUB_MIN, ADD_SUB_MAX)
+        k = random.choice([x for x in range(-15,16) if x !=0])  #avoid zero multiplication
 
+        y_add = (i + j) * k
+        if keep_answer(y_add):
+            examples.append((f"(({i}) + ({j})) * ({k}) =", str(y_add), "+*"))
+
+
+        y_sub = (i - j) * k
+        if keep_answer(y_sub):
+            examples.append((f"(({i}) - ({j})) * ({k}) =", str(y_sub), "-*"))
+    return examples
+
+def generate_three_adds(n_examples=10000):
+    """Randomly sample expressions with three additions."""
+    examples = []
+    for _ in range(n_examples):
+        i = random.randint(ADD_SUB_MIN, ADD_SUB_MAX)
+        j = random.randint(ADD_SUB_MIN, ADD_SUB_MAX)
+        k = random.randint(ADD_SUB_MIN, ADD_SUB_MAX)
+
+        y_add = i + j + k
+        if keep_answer(y_add):
+            examples.append((f"({i}) + ({j}) + ({k}) =", str(y_add), "++"))
+        y_sub = i - j - k
+        if keep_answer(y_sub):
+            examples.append((f"({i}) - ({j}) - ({k}) =", str(y_sub), "--"))
+
+    return examples
+  
 
 def generate_integrals(low_bound=-2, high_bound=5,test_set=0.2,max_degree=3):
     """closed integrals only to keep answers as integers
@@ -130,48 +137,97 @@ def generate_derivatives(min_val, max_val,test_set):
     #to be implemtted
     return                
 
-                
-        
 
-def build_dataset(add_sub_min, add_sub_max, mul_div_min, mul_div_max, test_set):
-    #combine all selectect ops to create one dataset
-    
-    all_train_lines = []
-    all_test_rows = []
-    
+def no_duplicates(examples):
+    seen = set()
+    out = []
+    for prompt, answer, op in examples:
+        if prompt in seen:
+            continue
+        seen.add(prompt)
+        out.append((prompt, answer, op))
+    return out
+            
+def train_test_split(examples, test_frac):
+    random.shuffle(examples)
+    split_index = int(len(examples) * (1 - test_frac))
+    train_rows = examples[:split_index]
+    test_rows = examples[split_index:]
+    return train_rows, test_rows    
+
+def balance_operations(examples, n):
+    if n <= len(examples):
+        return random.sample(examples, n)
+    return [random.choice(examples) for _ in range(n)]  #oversample
+
+MAX_ANSWER_LEN = 5
+
+def keep_answer(y, max_len=MAX_ANSWER_LEN):
+    return len(str(y)) <= max_len
+
+
+
+def build_dataset(test_frac):
+    pools = {}
+
     if ADD_SUB:
-        train_lines, test_rows = generate_add_sub(ADD_SUB_MIN, ADD_SUB_MAX,test_set)
-        all_train_lines.extend(train_lines)
-        all_test_rows.extend(test_rows)
+        addsub = generate_add_sub(ADD_SUB_MIN, ADD_SUB_MAX)
+        pools["+"] = no_duplicates([ex for ex in addsub if ex[2] == "+"])
+        pools["-"] = no_duplicates([ex for ex in addsub if ex[2] == "-"])
+
     if MUL_DIV:
-        train_lines, test_rows = generate_mul_div(MUL_DIV_MIN, MUL_DIV_MAX,test_set)
-        all_train_lines.extend(train_lines)
-        all_test_rows.extend(test_rows)
-    if INTEGRALS:
-        train_lines, test_rows = generate_integrals(
-            low_bound=-3,
-            high_bound=10,
-            test_set=test_set,
-            max_degree=4
+        muldiv = generate_mul_div(
+            mul_min=MUL_DIV_MIN, mul_max=MUL_DIV_MAX,
+            quot_min=-90, quot_max=90,
+            div_min=1, div_max=12
         )
-        all_train_lines.extend(train_lines)
-        all_test_rows.extend(test_rows)
-        
-    if DERIVATIVES:
-        train_lines, test_rows = generate_derivatives(add_sub_min, add_sub_max,test_set)
-        all_train_lines.extend(train_lines)
-        all_test_rows.extend(test_rows)
-        
-    #shuffle training so its mixed up
-    random.shuffle(all_train_lines)
+        pools["*"] = no_duplicates([ex for ex in muldiv if ex[2] == "*"])
+        pools["/"] = no_duplicates([ex for ex in muldiv if ex[2] == "/"])
+    if TWOADD_MUL:
+        twoadd_muldiv = generate_two_addsub_one_mul()
+        pools["+*"] = no_duplicates([ex for ex in twoadd_muldiv if ex[2] == "+*"])
+        pools["-*"] = no_duplicates([ex for ex in twoadd_muldiv if ex[2] == "-*"])
+    if THREEADD:
+        three_adds = generate_three_adds()
+        pools["++"] = no_duplicates([ex for ex in three_adds if ex[2] == "++"])
+        pools["--"] = no_duplicates([ex for ex in three_adds if ex[2] == "--"])
+
+
+    #remove empty pools
+    pools = {op: pool for op, pool in pools.items() if len(pool) > 0}
     
-    return all_train_lines, all_test_rows
+    train_rows = []
+    test_rows  = []
+
+    for op, pool in pools.items():
+        random.shuffle(pool)
+
+        n_test = max(1, int(len(pool) * test_frac))
+        op_test = pool[:n_test]
+        op_train = pool[n_test:]  
+
+
+        if len(op_train) == 0:
+            # steal 1 back from test
+            op_train = op_test[:1]
+            op_test  = op_test[1:]
+
+        train_rows.extend(op_train)
+        test_rows.extend(op_test)
+
+    random.shuffle(train_rows)
+    random.shuffle(test_rows)
+
+    train_lines = [f"{p}{a}\n" for (p, a, op) in train_rows]
+    
+    
+    return train_lines, test_rows
 
 def main():
     random.seed(SEED)
     os.makedirs(OUT_DIR, exist_ok=True)
     
-    train_lines, test_rows = build_dataset(ADD_SUB_MIN, ADD_SUB_MAX, MUL_DIV_MIN, MUL_DIV_MAX, TEST_SET)
+    train_lines, test_rows = build_dataset(TEST_SET)
     
         
     train_path = os.path.join(OUT_DIR,f"maths_{OP}_train.txt")
@@ -188,10 +244,9 @@ def main():
         for prompt, answer, operation in test_rows:
             writer.writerow([prompt, answer, operation])
         
-    print(f"Wrote {len(train_lines)} training equations to {train_path}")
-    print(f"Wrote {len(test_rows)}  test equations to {test_path}")
-    #print(f"Operands range: [{MIN_VAL}, {MAX_VAL}], test fraction: {TEST_SET}")
-    print(f"Ops enabled: {OP}")   
+    print(f"Wrote {len(train_lines)}")
+    print(f"Wrote {len(test_rows)}")
+     
     
     
 if __name__ == "__main__":
